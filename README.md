@@ -1,50 +1,32 @@
-# Welcome to your Expo app 👋
+# ArtistGrid
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+ArtistGrid is a React Native mobile application that helps artists prepare reference images for drawing.
 
-## Get started
+## Problem
 
-1. Install dependencies
+Artists often use reference images when drawing portraits, canvas artwork, and murals. Transferring proportions from a digital image to a physical drawing surface can be difficult.
 
-   ```bash
-   npm install
-   ```
+## Solution
 
-2. Start the app
+ArtistGrid helps artists prepare drawing references using visual transfer methods such as the traditional square grid method and doodle grid method.
 
-   ```bash
-   npx expo start
-   ```
+## Initial Features
 
-In the output, you'll find options to open the app in a
+- Select a reference image
+- Display the image in an editor
+- Add a customizable grid
+- Configure grid rows and columns
+- Change grid color and stroke width
+- Adjust brightness and contrast
+- Save projects
+- Generate doodle grids for mural artwork
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Tech Stack
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+- React Native
+- Expo
+- TypeScript
 
-## Get a fresh project
+## Project Status
 
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+In development.
