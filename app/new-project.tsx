@@ -1,25 +1,25 @@
-import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 
-import { AppButton } from "@/src/components/ui/AppButton";
 import { Screen } from "@/src/components/ui/Screen";
 import { COLORS } from "@/src/constants/colors";
+import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
+import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
 
-export default function HomeScreen() {
-  const handleNewProject = () => {
-    router.push("/new-project");
+export default function NewProjectScreen() {
+  const handleImageSelected = (image: SelectedImage) => {
+    console.log("Selected image:", image);
   };
 
   return (
     <Screen>
       <View style={styles.container}>
-        <Text style={styles.title}>ArtistGrid</Text>
+        <Text style={styles.title}>New Project</Text>
 
         <Text style={styles.description}>
-          Drawing Reference Toolkit for Artists
+          Choose a reference image to start preparing your drawing.
         </Text>
 
-        <AppButton title="New Project" onPress={handleNewProject} />
+        <ImagePickerSection onImageSelected={handleImageSelected} />
       </View>
     </Screen>
   );
@@ -28,14 +28,14 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+    paddingTop: 32,
   },
 
   title: {
     color: COLORS.textPrimary,
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 8,
   },
 
   description: {
