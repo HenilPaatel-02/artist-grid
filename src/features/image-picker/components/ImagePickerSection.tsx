@@ -8,10 +8,12 @@ import { SelectedImage } from "../image-picker.types";
 
 type ImagePickerSectionProps = {
   onImageSelected?: (image: SelectedImage) => void;
+  onImageCleared?: () => void;
 };
 
 export function ImagePickerSection({
   onImageSelected,
+  onImageCleared,
 }: ImagePickerSectionProps) {
   const { selectedImage, isLoading, error, pickImage, clearImage } =
     useImagePicker();
@@ -22,6 +24,11 @@ export function ImagePickerSection({
     if (image) {
       onImageSelected?.(image);
     }
+  };
+
+  const handleClearImage = () => {
+    clearImage();
+    onImageCleared?.();
   };
   return (
     <View style={styles.container}>
@@ -41,7 +48,7 @@ export function ImagePickerSection({
 
           <AppButton
             title="Remove Image"
-            onPress={clearImage}
+            onPress={handleClearImage}
             style={styles.secondaryButton}
           />
         </View>
