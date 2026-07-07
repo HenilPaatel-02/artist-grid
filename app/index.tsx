@@ -1,74 +1,47 @@
-import {
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { router } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
+
+import { AppButton } from "@/src/components/ui/AppButton";
+import { Screen } from "@/src/components/ui/Screen";
+import { COLORS } from "@/src/constants/colors";
 
 export default function HomeScreen() {
   const handleNewProject = () => {
-    console.log("New Project");
+    router.push("/new-project");
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
+    <Screen>
+      <View style={styles.container}>
         <Text style={styles.title}>ArtistGrid</Text>
 
         <Text style={styles.description}>
           Drawing Reference Toolkit for Artists
         </Text>
 
-        <TouchableOpacity
-          style={styles.button}
-          onPress={handleNewProject}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.buttonText}>New Project</Text>
-        </TouchableOpacity>
+        <AppButton title="New Project" onPress={handleNewProject} />
       </View>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#121212",
-  },
-
-  content: {
-    flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
   },
 
   title: {
+    color: COLORS.textPrimary,
     fontSize: 36,
     fontWeight: "700",
-    color: "#FFFFFF",
     marginBottom: 12,
   },
 
   description: {
+    color: COLORS.textSecondary,
     fontSize: 16,
-    color: "#A1A1AA",
-    textAlign: "center",
+    lineHeight: 24,
     marginBottom: 32,
-  },
-
-  button: {
-    backgroundColor: "#7C3AED",
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
