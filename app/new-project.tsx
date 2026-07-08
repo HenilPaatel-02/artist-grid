@@ -1,51 +1,131 @@
-import { StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "@/src/components/ui/Screen";
 import { COLORS } from "@/src/constants/colors";
+
+import { DrawingSurfaceSection } from "@/src/features/drawing-surface/components/DrawingSurfaceSection";
+
+import {
+  DrawingSurface,
+  SurfaceOrientation,
+} from "@/src/features/drawing-surface/drawing-surface.types";
+
 import { ImageOrientation } from "@/src/features/image-orientation/image-orientation.types";
+
 import { getImageOrientation } from "@/src/features/image-orientation/image-orientation.utils";
+
 import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
+
 import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
-import { useState } from "react";
 
 export default function NewProjectScreen() {
-  const [orientation, setOrientation] = useState<ImageOrientation | null>(null);
+  const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
+    null,
+  );
+
+  const [imageOrientation, setImageOrientation] =
+    useState<ImageOrientation | null>(null);
+
+  const [drawingSurface, setDrawingSurface] = useState<DrawingSurface | null>(
+    null,
+  );
 
   const handleImageSelected = (image: SelectedImage) => {
-    const ImageOrientation = getImageOrientation(image.width, image.height);
-    setOrientation(ImageOrientation);
+    const orientation = getImageOrientation(image.width, image.height);
+
+    setSelectedImage(image);
+    setImageOrientation(orientation);
+    setDrawingSurface(null);
   };
-  const handleImageClear = () => {
-    setOrientation(null);
+
+  const handleImageCleared = () => {
+    setSelectedImage(null);
+    setImageOrientation(null);
+    setDrawingSurface(null);
   };
+
+  const handleSurfaceChange = (surface: DrawingSurface | null) => {
+    setDrawingSurface(surface);
+  };
+
+  const getInitialSurfaceOrientation = (): SurfaceOrientation => {
+    if (imageOrientation === "landscape") {
+      return "landscape";
+    }
+
+    return "portrait";
+  };
+
   return (
-    <Screen>
-      <View style={styles.container}>
+    <Screen style={styles.screen}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <Text style={styles.title}>New Project</Text>
 
         <Text style={styles.description}>
-          Choose a reference image to start preparing your drawing.
+          Choose a reference image and configure your physical drawing surface.
         </Text>
 
         <ImagePickerSection
           onImageSelected={handleImageSelected}
-          onImageCleared={handleImageClear}
+          onImageCleared={handleImageCleared}
         />
 
-        {orientation ? (
-          <Text style={styles.orientationText}>
-            Image Orientation : {orientation}
-          </Text>
+        {selectedImage && imageOrientation ? (
+          <>
+            <View style={styles.imageDetails}>
+              <Text style={styles.sectionLabel}>Reference Image</Text>
+
+              <Text style={styles.imageDimensions}>
+                {selectedImage.width} × {selectedImage.height} px
+              </Text>
+
+              <Text style={styles.imageOrientation}>
+                {capitalize(imageOrientation)}
+              </Text>
+            </View>
+
+            <View style={styles.sectionSeparator} />
+
+            <DrawingSurfaceSection
+              key={selectedImage.uri}
+              initialOrientation={getInitialSurfaceOrientation()}
+              onSurfaceChange={handleSurfaceChange}
+            />
+          </>
         ) : null}
-      </View>
+
+        {drawingSurface ? (
+          <View style={styles.readyContainer}>
+            <Text style={styles.readyTitle}>Drawing Surface Ready</Text>
+
+            <Text style={styles.readyDescription}>
+              {drawingSurface.type} · {drawingSurface.size.width} ×{" "}
+              {drawingSurface.size.height} {drawingSurface.size.unit}
+            </Text>
+          </View>
+        ) : null}
+      </ScrollView>
     </Screen>
   );
 }
 
+const capitalize = (value: string): string => {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  screen: {
+    paddingHorizontal: 0,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 24,
     paddingTop: 32,
+    paddingBottom: 48,
   },
 
   title: {
@@ -61,10 +141,58 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 32,
   },
-  orientationText: {
+
+  imageDetails: {
+    marginTop: 24,
+    padding: 18,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  sectionLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    marginBottom: 8,
+  },
+
+  imageDimensions: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+
+  imageOrientation: {
     color: COLORS.textSecondary,
     fontSize: 14,
-    textAlign: "center",
-    marginTop: 16,
+    marginTop: 4,
+  },
+
+  sectionSeparator: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 32,
+  },
+
+  readyContainer: {
+    marginTop: 28,
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+
+  readyTitle: {
+    color: COLORS.textPrimary,
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  readyDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
   },
 });
