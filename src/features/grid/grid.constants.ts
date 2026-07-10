@@ -1,0 +1,12 @@
+export const GRID_LIMITS = {
+  MIN_ROWS: 1,
+  MAX_ROWS: 100,
+
+  MIN_COLUMNS: 1,
+  MAX_COLUMNS: 100,
+
+  MIN_CELL_SIZE_MM: 1,
+
+  MIN_TARGET_CELLS: 2,
+  MAX_TARGET_CELLS: 100,
+} as const;

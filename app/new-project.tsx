@@ -17,8 +17,10 @@ import { getImageOrientation } from "@/src/features/image-orientation/image-orie
 
 import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
 
+import { GridSettingsSection } from "@/src/features/grid/components/GridSettingsSection";
 import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
 
+import { GridCalculation } from "@/src/features/grid/grid.types";
 export default function NewProjectScreen() {
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
@@ -31,24 +33,33 @@ export default function NewProjectScreen() {
     null,
   );
 
+  const [gridCalculation, setGridCalculation] =
+    useState<GridCalculation | null>(null);
+
   const handleImageSelected = (image: SelectedImage) => {
     const orientation = getImageOrientation(image.width, image.height);
 
     setSelectedImage(image);
     setImageOrientation(orientation);
     setDrawingSurface(null);
+    setGridCalculation(null);
   };
 
   const handleImageCleared = () => {
     setSelectedImage(null);
     setImageOrientation(null);
     setDrawingSurface(null);
+    setGridCalculation(null);
   };
 
   const handleSurfaceChange = (surface: DrawingSurface | null) => {
     setDrawingSurface(surface);
+    setGridCalculation(null);
   };
 
+  const handleGridChange = (calculation: GridCalculation | null) => {
+    setGridCalculation(calculation);
+  };
   const getInitialSurfaceOrientation = (): SurfaceOrientation => {
     if (imageOrientation === "landscape") {
       return "landscape";
@@ -95,6 +106,30 @@ export default function NewProjectScreen() {
               initialOrientation={getInitialSurfaceOrientation()}
               onSurfaceChange={handleSurfaceChange}
             />
+
+            {drawingSurface ? (
+              <>
+                <View style={styles.sectionSeparator} />
+
+                <GridSettingsSection
+                  key={`${drawingSurface.type}-${drawingSurface.orientation}`}
+                  surface={drawingSurface}
+                  onGridChange={handleGridChange}
+                />
+              </>
+            ) : null}
+
+            {gridCalculation ? (
+              <View style={styles.readyContainer}>
+                <Text style={styles.readyTitle}>Grid Ready</Text>
+
+                <Text style={styles.readyDescription}>
+                  {gridCalculation.columns} × {gridCalculation.rows} grid ·{" "}
+                  {gridCalculation.cellWidth.toFixed(2)} ×{" "}
+                  {gridCalculation.cellHeight.toFixed(2)} mm cells
+                </Text>
+              </View>
+            ) : null}
           </>
         ) : null}
 
