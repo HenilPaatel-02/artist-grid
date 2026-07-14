@@ -17,10 +17,10 @@ import { getImageOrientation } from "@/src/features/image-orientation/image-orie
 
 import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
 
+import { GridPreviewSection } from "@/src/features/grid/components/GridPreviewSection";
 import { GridSettingsSection } from "@/src/features/grid/components/GridSettingsSection";
-import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
-
 import { GridCalculation } from "@/src/features/grid/grid.types";
+import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
 export default function NewProjectScreen() {
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
@@ -130,6 +130,18 @@ export default function NewProjectScreen() {
                 </Text>
               </View>
             ) : null}
+          </>
+        ) : null}
+
+        {selectedImage && drawingSurface && gridCalculation ? (
+          <>
+            <View style={styles.sectionSeparator} />
+
+            <GridPreviewSection
+              image={selectedImage}
+              surface={drawingSurface}
+              calculation={gridCalculation}
+            />
           </>
         ) : null}
 
