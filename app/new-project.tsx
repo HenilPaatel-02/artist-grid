@@ -17,16 +17,10 @@ import { getImageOrientation } from "@/src/features/image-orientation/image-orie
 
 import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
 
-import { GridPreviewSection } from "@/src/features/grid/components/GridPreviewSection";
 import { GridSettingsSection } from "@/src/features/grid/components/GridSettingsSection";
-import { GridCalculation } from "@/src/features/grid/grid.types";
-import { ImageEffectsSection } from "@/src/features/image-effects/components/ImageEffectsSection";
-import {
-  DEFAULT_IMAGE_EFFECTS,
-  ImageEffects,
-} from "@/src/features/image-effects/image-effects.types";
 import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
 
+import { GridCalculation } from "@/src/features/grid/grid.types";
 export default function NewProjectScreen() {
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
@@ -141,25 +135,6 @@ export default function NewProjectScreen() {
                 </Text>
               </View>
             ) : null}
-          </>
-        ) : null}
-        {selectedImage && drawingSurface && gridCalculation ? (
-          <>
-            <View style={styles.sectionSeparator} />
-
-            <ImageEffectsSection
-              effects={imageEffects}
-              onChange={setImageEffects}
-            />
-
-            <View style={styles.sectionSeparator} />
-
-            <GridPreviewSection
-              image={selectedImage}
-              surface={drawingSurface}
-              calculation={gridCalculation}
-              imageEffects={imageEffects}
-            />
           </>
         ) : null}
 
