@@ -17,10 +17,10 @@ import { getImageOrientation } from "@/src/features/image-orientation/image-orie
 
 import { ImagePickerSection } from "@/src/features/image-picker/components/ImagePickerSection";
 
-import { GridPreviewSection } from "@/src/features/grid/components/GridPreviewSection";
 import { GridSettingsSection } from "@/src/features/grid/components/GridSettingsSection";
-import { GridCalculation } from "@/src/features/grid/grid.types";
 import { SelectedImage } from "@/src/features/image-picker/image-picker.types";
+
+import { GridCalculation } from "@/src/features/grid/grid.types";
 export default function NewProjectScreen() {
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
@@ -35,7 +35,9 @@ export default function NewProjectScreen() {
 
   const [gridCalculation, setGridCalculation] =
     useState<GridCalculation | null>(null);
-
+  const [imageEffects, setImageEffects] = useState<ImageEffects>(
+    DEFAULT_IMAGE_EFFECTS,
+  );
   const handleImageSelected = (image: SelectedImage) => {
     const orientation = getImageOrientation(image.width, image.height);
 
@@ -43,6 +45,7 @@ export default function NewProjectScreen() {
     setImageOrientation(orientation);
     setDrawingSurface(null);
     setGridCalculation(null);
+    setImageEffects(DEFAULT_IMAGE_EFFECTS);
   };
 
   const handleImageCleared = () => {
@@ -50,6 +53,8 @@ export default function NewProjectScreen() {
     setImageOrientation(null);
     setDrawingSurface(null);
     setGridCalculation(null);
+
+    setImageEffects(DEFAULT_IMAGE_EFFECTS);
   };
 
   const handleSurfaceChange = (surface: DrawingSurface | null) => {
@@ -130,18 +135,6 @@ export default function NewProjectScreen() {
                 </Text>
               </View>
             ) : null}
-          </>
-        ) : null}
-
-        {selectedImage && drawingSurface && gridCalculation ? (
-          <>
-            <View style={styles.sectionSeparator} />
-
-            <GridPreviewSection
-              image={selectedImage}
-              surface={drawingSurface}
-              calculation={gridCalculation}
-            />
           </>
         ) : null}
 

@@ -18,16 +18,20 @@ import { GridCanvas } from "./GridCanvas";
 
 import { GridStyleControls } from "./GridStyleControls";
 
+import { ImageEffects } from "@/src/features/image-effects/image-effects.types";
+
 type GridPreviewSectionProps = {
   image: SelectedImage;
   surface: DrawingSurface;
   calculation: GridCalculation;
+  imageEffects: ImageEffects;
 };
 
 export function GridPreviewSection({
   image,
   surface,
   calculation,
+  imageEffects,
 }: GridPreviewSectionProps) {
   const [availableWidth, setAvailableWidth] = useState(0);
 
@@ -63,6 +67,7 @@ export function GridPreviewSection({
             width={canvasLayout.width}
             height={canvasLayout.height}
             gridStyle={gridStyle}
+            imageEffects={imageEffects}
           />
         ) : null}
       </View>

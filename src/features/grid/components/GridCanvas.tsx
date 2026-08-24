@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 
 import {
   Canvas,
+  ColorMatrix,
   Line,
   Image as SkiaImage,
   useImage,
@@ -19,6 +20,8 @@ import { scaleGridLines } from "../grid-coordinate-scaling.utils";
 
 import { generateGridLines } from "../grid-lines.utils";
 
+import { ImageEffects } from "../../image-effects/image-effects.types";
+import { createImageEffectMatrix } from "../../image-effects/image-effects.utils";
 import { GridCalculation } from "../grid.types";
 
 type GridCanvasProps = {
@@ -29,6 +32,7 @@ type GridCanvasProps = {
   height: number;
 
   gridStyle: GridCanvasStyle;
+  imageEffects: ImageEffects;
 };
 
 export function GridCanvas({
@@ -37,9 +41,16 @@ export function GridCanvas({
   width,
   height,
   gridStyle,
+  imageEffects,
 }: GridCanvasProps) {
+  const imageEffectMatrix = createImageEffectMatrix(imageEffects);
   const skiaImage = useImage(image.uri);
-
+  const imageRect = {
+    x: 0,
+    y: 0,
+    width,
+    height,
+  };
   const gridLines = useMemo(() => {
     const physicalLines = generateGridLines(calculation);
 
@@ -72,12 +83,14 @@ export function GridCanvas({
     >
       <SkiaImage
         image={skiaImage}
-        x={0}
-        y={0}
-        width={width}
-        height={height}
-        fit="fill"
-      />
+        x={imageRect.x}
+        y={imageRect.y}
+        width={imageRect.width}
+        height={imageRect.height}
+        fit="contain"
+      >
+        <ColorMatrix matrix={imageEffectMatrix} />
+      </SkiaImage>
 
       {gridLines.map((line, index) => (
         <Line
