@@ -10,6 +10,10 @@ export default function HomeScreen() {
     router.push("/new-project");
   };
 
+  const handleMyProjects = () => {
+    router.push("/projects" as any);
+  };
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -20,6 +24,8 @@ export default function HomeScreen() {
         </Text>
 
         <AppButton title="New Project" onPress={handleNewProject} />
+        <View style={{ height: 16 }} />
+        <AppButton title="My Projects" onPress={handleMyProjects} />
       </View>
     </Screen>
   );

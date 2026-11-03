@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "@/src/constants/colors";
@@ -16,19 +16,32 @@ import { PaperSizeSelector } from "./PaperSizeSelector";
 
 type DrawingSurfaceSectionProps = {
   initialOrientation: SurfaceOrientation;
+  restoredSurface?: DrawingSurface | null;
   onSurfaceChange?: (surface: DrawingSurface | null) => void;
 };
 
 export function DrawingSurfaceSection({
   initialOrientation,
+  restoredSurface = null,
   onSurfaceChange,
 }: DrawingSurfaceSectionProps) {
-  const [selectedPaper, setSelectedPaper] = useState<PaperType | null>(null);
+  const [selectedPaper, setSelectedPaper] = useState<PaperType | null>(
+    restoredSurface?.type ?? null,
+  );
 
-  const [orientation, setOrientation] =
-    useState<SurfaceOrientation>(initialOrientation);
+  const [orientation, setOrientation] = useState<SurfaceOrientation>(
+    restoredSurface?.orientation ?? initialOrientation,
+  );
 
-  const [surface, setSurface] = useState<DrawingSurface | null>(null);
+  const [surface, setSurface] = useState<DrawingSurface | null>(
+    restoredSurface,
+  );
+
+  useEffect(() => {
+    setSelectedPaper(restoredSurface?.type ?? null);
+    setOrientation(restoredSurface?.orientation ?? initialOrientation);
+    setSurface(restoredSurface ?? null);
+  }, [restoredSurface, initialOrientation]);
 
   const handlePaperSelect = (paper: PaperType) => {
     setSelectedPaper(paper);

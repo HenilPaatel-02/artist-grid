@@ -13,10 +13,13 @@ import { Screen } from "@/src/components/ui/Screen";
 import {
   deleteStoredProject,
   getAllProjects,
+  getProjectById,
 } from "@/src/features/project/project.repository";
 import type { Project } from "@/src/features/project/project.types";
 
 import { AppButton } from "@/src/components/ui/AppButton";
+
+import { deletePersistedProjectImage } from "@/src/features/project/project-image.storage";
 
 function formatProjectDate(date: string): string {
   const parsedDate = new Date(date);
@@ -119,6 +122,7 @@ export default function ProjectsScreen() {
       </Screen>
     );
   }
+
   const handleDeleteProject = (project: Project) => {
     Alert.alert(
       "Delete Project",
@@ -135,15 +139,43 @@ export default function ProjectsScreen() {
             try {
               setDeletingProjectId(project.id);
 
+              // 1. Get the project before deleting its record.
+              const projectToDelete = await getProjectById(project.id);
+
+              if (!projectToDelete) {
+                throw new Error("Project no longer exists.");
+              }
+
+              // 2. Delete the project record from storage.
               await deleteStoredProject(project.id);
 
+              // 3. Update the UI immediately.
               setProjects((currentProjects) =>
                 currentProjects.filter((item) => item.id !== project.id),
               );
+
+              // 4. Delete its locally persisted image.
+              try {
+                await deletePersistedProjectImage(projectToDelete.image.uri);
+              } catch (imageError) {
+                // The project record is already deleted.
+                // An image cleanup failure should not undo that success.
+                console.error(
+                  "Project deleted, but image cleanup failed:",
+                  imageError,
+                );
+              }
+
+              Alert.alert("Success", "Project deleted successfully.");
             } catch (error) {
               console.error("Failed to delete project:", error);
 
-              Alert.alert("Delete Failed", "Unable to delete the project.");
+              Alert.alert(
+                "Delete Failed",
+                error instanceof Error
+                  ? error.message
+                  : "Unable to delete the project.",
+              );
             } finally {
               setDeletingProjectId(null);
             }
@@ -152,6 +184,7 @@ export default function ProjectsScreen() {
       ],
     );
   };
+
   return (
     <Screen>
       <View style={styles.container}>

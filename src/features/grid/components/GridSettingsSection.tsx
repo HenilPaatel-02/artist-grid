@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { COLORS } from "@/src/constants/colors";
@@ -12,19 +12,30 @@ import { GridCalculation, GridSettings } from "../grid.types";
 
 type GridSettingsSectionProps = {
   surface: DrawingSurface;
+  restoredCalculation?: GridCalculation | null;
   onGridChange?: (calculation: GridCalculation | null) => void;
 };
 
 export function GridSettingsSection({
   surface,
+  restoredCalculation = null,
   onGridChange,
 }: GridSettingsSectionProps) {
-  const [rows, setRows] = useState("10");
-  const [columns, setColumns] = useState("8");
-
-  const [calculation, setCalculation] = useState<GridCalculation | null>(null);
-
+  const [rows, setRows] = useState(String(restoredCalculation?.rows ?? 10));
+  const [columns, setColumns] = useState(
+    String(restoredCalculation?.columns ?? 8),
+  );
+  const [calculation, setCalculation] = useState<GridCalculation | null>(
+    restoredCalculation,
+  );
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRows(String(restoredCalculation?.rows ?? 10));
+    setColumns(String(restoredCalculation?.columns ?? 8));
+    setCalculation(restoredCalculation ?? null);
+    setError(null);
+  }, [restoredCalculation, surface]);
 
   const handleCalculate = () => {
     try {

@@ -4,11 +4,13 @@ import {
   Line,
   Skia,
   Image as SkiaImage,
+  Rect as SkiaRect,
   Text as SkiaText,
+  useCanvasRef,
   useImage,
-  vec,
+  vec
 } from "@shopify/react-native-skia";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 import type { DrawingSurface } from "@/src/features/drawing-surface/drawing-surface.types";
@@ -16,8 +18,10 @@ import type { ImageEffects } from "@/src/features/image-effects/image-effects.ty
 import { createImageEffectMatrix } from "@/src/features/image-effects/image-effects.utils";
 import type { SelectedImage } from "@/src/features/image-picker/image-picker.types";
 
+import type { ExportSettings } from "@/src/features/export/export.types";
 import type { GridCalculation } from "@/src/features/grid/grid.types";
 import type { GridStyling } from "../grid-styling.types";
+
 
 type GridCanvasProps = {
   image: SelectedImage;
@@ -25,6 +29,10 @@ type GridCanvasProps = {
   calculation: GridCalculation;
   imageEffects: ImageEffects;
   gridStyling: GridStyling;
+
+  onCanvasReady?: (capture: (() => Promise<string>) | null) => void;
+
+  exportSettings?: ExportSettings;
 };
 
 type Rect = {
@@ -40,36 +48,51 @@ export function GridCanvas({
   calculation,
   imageEffects,
   gridStyling,
+  onCanvasReady,
+  exportSettings,
 }: GridCanvasProps) {
   const { width: screenWidth } = useWindowDimensions();
+  const canvasRef = useCanvasRef();
 
-  /*
-   * ==================================================
-   * IMAGE
-   * ==================================================
-   */
+  // IMAGE
 
   const skiaImage = useImage(image.uri);
 
-  /*
-   * ==================================================
-   * IMAGE EFFECTS
-   * ==================================================
-   */
+  //  IMAGE EFFECTS
 
   const imageEffectMatrix = useMemo(
     () => createImageEffectMatrix(imageEffects),
     [imageEffects],
   );
 
-  /*
-   * ==================================================
-   * SYSTEM FONT
-   * ==================================================
-   */
+  const activeGridStyling = useMemo<GridStyling>(() => {
+    if (!exportSettings) {
+      return gridStyling;
+    }
+
+    return {
+      ...gridStyling,
+      showGrid:
+        exportSettings.content === "grid-only"
+          ? true
+          : exportSettings.content === "image-only"
+            ? false
+            : gridStyling.showGrid,
+      showRowLabels:
+        exportSettings.content !== "image-only" && exportSettings.showRowLabels,
+      showColumnLabels:
+        exportSettings.content !== "image-only" &&
+        exportSettings.showColumnLabels,
+    };
+  }, [gridStyling, exportSettings]);
+
+  // SYSTEM FONT
 
   const labelFont = useMemo(() => {
-    if (!gridStyling.showRowLabels && !gridStyling.showColumnLabels) {
+    if (
+      !activeGridStyling.showRowLabels &&
+      !activeGridStyling.showColumnLabels
+    ) {
       return null;
     }
 
@@ -85,20 +108,19 @@ export function GridCanvas({
       return null;
     }
 
-    return Skia.Font(typeface, gridStyling.labelSize);
+    return Skia.Font(typeface, activeGridStyling.labelSize);
   }, [
-    gridStyling.labelSize,
-    gridStyling.showRowLabels,
-    gridStyling.showColumnLabels,
+    activeGridStyling.labelSize,
+    activeGridStyling.showRowLabels,
+    activeGridStyling.showColumnLabels,
   ]);
 
-  /*
-   * ==================================================
-   * CANVAS SIZE
-   * ==================================================
-   */
+  // CANVAS SIZE
 
-  const canvasWidth = Math.max(screenWidth - 40, 280);
+  const baseCanvasWidth = Math.max(screenWidth - 40, 280);
+
+  const canvasWidth =
+    baseCanvasWidth * (exportSettings?.size === "large" ? 2 : 1);
 
   const surfaceWidth = Number(surface.size.width) || 1;
 
@@ -108,11 +130,7 @@ export function GridCanvas({
 
   const canvasHeight = canvasWidth / surfaceAspectRatio;
 
-  /*
-   * ==================================================
-   * GRID
-   * ==================================================
-   */
+  // GRID
 
   const rawColumns =
     (calculation as any).columns ?? (calculation as any).columnCount;
@@ -123,21 +141,17 @@ export function GridCanvas({
 
   const rows = Math.max(1, Math.round(Number(rawRows) || 1));
 
-  /*
-   * ==================================================
-   * LABEL SPACE
-   * ==================================================
-   */
+  // LABEL SPACE
 
   const largestRowLabel = String(rows);
 
   const rowLabelWidth = labelFont
     ? labelFont.measureText(largestRowLabel).width
-    : gridStyling.labelSize;
+    : activeGridStyling.labelSize;
 
   const labelSpace = Math.max(
     rowLabelWidth + 16,
-    gridStyling.labelSize + 16,
+    activeGridStyling.labelSize + 16,
     28,
   );
   /*
@@ -152,22 +166,20 @@ export function GridCanvas({
    */
 
   const drawingRect: Rect = {
-    x: gridStyling.showRowLabels ? labelSpace : 0,
-    y: gridStyling.showColumnLabels ? labelSpace : 0,
+    x: activeGridStyling.showRowLabels ? labelSpace : 0,
+    y: activeGridStyling.showColumnLabels ? labelSpace : 0,
 
-    width: canvasWidth - (gridStyling.showRowLabels ? labelSpace : 0),
+    width:
+      canvasWidth - (activeGridStyling.showRowLabels ? labelSpace : 0),
 
-    height: canvasHeight - (gridStyling.showColumnLabels ? labelSpace : 0),
+    height:
+      canvasHeight - (activeGridStyling.showColumnLabels ? labelSpace : 0),
   };
 
   const cellWidth = drawingRect.width / columns;
   const cellHeight = drawingRect.height / rows;
 
-  /*
-   * ==================================================
-   * IMAGE PLACEMENT
-   * ==================================================
-   */
+  // IMAGE PLACEMENT
 
   const imageRect = calculateContainRect(
     image.width,
@@ -214,17 +226,41 @@ export function GridCanvas({
    */
 
   const gridColor = colorWithOpacity(
-    gridStyling.gridColor,
-    gridStyling.gridOpacity,
+    activeGridStyling.gridColor,
+    activeGridStyling.gridOpacity,
   );
 
-  const labelColor = colorWithOpacity(gridStyling.labelColor, 100);
+  const labelColor = colorWithOpacity(activeGridStyling.labelColor, 100);
 
-  /*
-   * ==================================================
-   * IMAGE LOADING
-   * ==================================================
-   */
+  // canvas capture
+
+  const captureCanvasAsBase64 = useCallback(async (): Promise<string> => {
+    const canvas = canvasRef.current;
+
+    if (!canvas) {
+      throw new Error("The grid preview is not ready yet.");
+    }
+
+    const snapshot = await canvas.makeImageSnapshotAsync();
+    const base64 = snapshot.encodeToBase64();
+
+    if (!base64) {
+      throw new Error("Could not encode the preview as a PNG.");
+    }
+
+    return base64;
+  }, [canvasRef]);
+
+  useEffect(() => {
+    if (!skiaImage) {
+      onCanvasReady?.(null);
+      return;
+    }
+
+    onCanvasReady?.(captureCanvasAsBase64);
+  }, [skiaImage, onCanvasReady, captureCanvasAsBase64]);
+
+  // IMAGE LOADING
 
   if (!skiaImage) {
     return (
@@ -254,31 +290,43 @@ export function GridCanvas({
         ]}
       >
         <Canvas
+          ref={canvasRef}
           style={{
             width: canvasWidth,
             height: canvasHeight,
           }}
         >
+          {exportSettings?.background === "white" ? (
+            <SkiaRect
+              x={0}
+              y={0}
+              width={canvasWidth}
+              height={canvasHeight}
+              color="#FFFFFF"
+            />
+          ) : null}
           {/* ========================================
               IMAGE
               ======================================== */}
 
-          <SkiaImage
-            image={skiaImage}
-            x={imageRect.x}
-            y={imageRect.y}
-            width={imageRect.width}
-            height={imageRect.height}
-            fit="contain"
-          >
-            <ColorMatrix matrix={imageEffectMatrix} />
-          </SkiaImage>
+          {exportSettings?.content !== "grid-only" ? (
+            <SkiaImage
+              image={skiaImage}
+              x={imageRect.x}
+              y={imageRect.y}
+              width={imageRect.width}
+              height={imageRect.height}
+              fit="contain"
+            >
+              <ColorMatrix matrix={imageEffectMatrix} />
+            </SkiaImage>
+          ) : null}
 
           {/* ========================================
               GRID
               ======================================== */}
 
-          {gridStyling.showGrid ? (
+          {activeGridStyling.showGrid ? (
             <>
               {/* Vertical */}
 
@@ -293,7 +341,7 @@ export function GridCanvas({
                     p1={vec(x, drawingRect.y)}
                     p2={vec(x, drawingRect.y + drawingRect.height)}
                     color={gridColor}
-                    strokeWidth={gridStyling.gridStrokeWidth}
+                    strokeWidth={activeGridStyling.gridStrokeWidth}
                   />
                 );
               })}
@@ -311,7 +359,7 @@ export function GridCanvas({
                     p1={vec(drawingRect.x, y)}
                     p2={vec(drawingRect.x + drawingRect.width, y)}
                     color={gridColor}
-                    strokeWidth={gridStyling.gridStrokeWidth}
+                    strokeWidth={activeGridStyling.gridStrokeWidth}
                   />
                 );
               })}
@@ -323,7 +371,7 @@ export function GridCanvas({
               A B C D ...
               ======================================== */}
 
-          {gridStyling.showColumnLabels && labelFont
+          {activeGridStyling.showColumnLabels && labelFont
             ? Array.from({
                 length: columns,
               }).map((_, index) => {
@@ -352,7 +400,7 @@ export function GridCanvas({
               1 2 3 4 ...
               ======================================== */}
 
-          {gridStyling.showRowLabels && labelFont
+          {activeGridStyling.showRowLabels && labelFont
             ? Array.from({
                 length: rows,
               }).map((_, index) => {
@@ -371,7 +419,7 @@ export function GridCanvas({
                   <SkiaText
                     key={`row-${index}`}
                     x={x}
-                    y={centerY + gridStyling.labelSize / 3}
+                    y={centerY + activeGridStyling.labelSize / 3}
                     text={label}
                     font={labelFont}
                     color={labelColor}

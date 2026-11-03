@@ -1,5 +1,12 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { Screen } from "@/src/components/ui/Screen";
 import { COLORS } from "@/src/constants/colors";
@@ -26,13 +33,49 @@ import {
   type ImageEffects,
 } from "@/src/features/image-effects/image-effects.types";
 
+import { AppButton } from "@/src/components/ui/AppButton";
 import { GridStylingSection } from "@/src/features/grid/components/GridStylingSection";
 import {
   DEFAULT_GRID_STYLING,
   type GridStyling,
 } from "@/src/features/grid/grid-styling.types";
+import { DEFAULT_PROJECT_NAME } from "@/src/features/project/project.constants";
+import {
+  createStoredProject,
+  getProjectById,
+  updateStoredProject,
+} from "@/src/features/project/project.repository";
+import {
+  createProject,
+  updateProjectTimestamp,
+} from "@/src/features/project/project.utils";
+import { useLocalSearchParams } from "expo-router";
+
+import {
+  deletePersistedProjectImage,
+  persistProjectImage,
+} from "@/src/features/project/project-image.storage";
+
+import {
+  clearDraft,
+  getDraft,
+  saveDraft,
+} from "@/src/features/project/draft/draft.storage";
+
+import { createProjectDraft } from "@/src/features/project/draft/draft.utils";
+
+import type { ProjectDraft } from "@/src/features/project/draft/draft.types";
+import type { Project } from "@/src/features/project/project.types";
 
 export default function NewProjectScreen() {
+  const { projectId: routeProjectId } = useLocalSearchParams<{
+    projectId?: string;
+  }>();
+
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState(DEFAULT_PROJECT_NAME);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [selectedImage, setSelectedImage] = useState<SelectedImage | null>(
     null,
   );
@@ -55,24 +98,187 @@ export default function NewProjectScreen() {
     ...DEFAULT_GRID_STYLING,
   });
 
+  const [isEditorReady, setIsEditorReady] = useState(false);
+
+  const [draftStatus, setDraftStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
+
+  const saveSequence = useRef(0);
+  const skipNextAutosave = useRef(false);
+  const isSavingRef = useRef(false);
+
+  const restoreProject = (project: Project) => {
+    setProjectId(project.id);
+    setProjectName(project.name);
+    setSelectedImage(project.image);
+
+    setImageOrientation(
+      getImageOrientation(project.image.width, project.image.height),
+    );
+
+    setDrawingSurface(project.drawingSurface);
+    setGridCalculation(project.gridCalculation);
+    setImageEffects(project.imageEffects);
+    setGridStyling(project.gridStyling);
+  };
+
+  const restoreDraft = (draft: ProjectDraft) => {
+    setProjectId(draft.projectId);
+    setProjectName(draft.projectName);
+    setSelectedImage(draft.image);
+
+    setImageOrientation(
+      draft.image
+        ? getImageOrientation(draft.image.width, draft.image.height)
+        : null,
+    );
+
+    setDrawingSurface(draft.drawingSurface);
+    setGridCalculation(draft.gridCalculation);
+    setImageEffects(draft.imageEffects);
+    setGridStyling(draft.gridStyling);
+  };
+
+  // Load an existing project or offer recovery of an unfinished draft.
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeEditor = async () => {
+      try {
+        if (routeProjectId) {
+          const project = await getProjectById(routeProjectId);
+
+          if (!isMounted) return;
+
+          if (!project) {
+            Alert.alert("Project Not Found", "This project no longer exists.");
+            setIsEditorReady(true);
+            return;
+          }
+
+          const draft = await getDraft();
+
+          if (!isMounted) return;
+
+          const hasNewerMatchingDraft =
+            draft?.projectId === project.id &&
+            draft.savedAt > project.updatedAt;
+
+          if (hasNewerMatchingDraft && draft) {
+            Alert.alert(
+              "Recover Changes?",
+              "A newer autosaved draft was found for this project.",
+              [
+                {
+                  text: "Use Saved Project",
+                  onPress: async () => {
+                    try {
+                      await clearDraft();
+
+                      if (!isMounted) return;
+
+                      restoreProject(project);
+                    } catch (error) {
+                      console.error("Failed to clear draft:", error);
+
+                      if (isMounted) {
+                        restoreProject(project);
+                      }
+                    } finally {
+                      if (isMounted) {
+                        setIsEditorReady(true);
+                      }
+                    }
+                  },
+                },
+                {
+                  text: "Recover Draft",
+                  onPress: () => {
+                    if (!isMounted) return;
+
+                    restoreDraft(draft);
+                    setIsEditorReady(true);
+                  },
+                },
+              ],
+            );
+
+            return;
+          }
+
+          restoreProject(project);
+          setIsEditorReady(true);
+          return;
+        }
+
+        const draft = await getDraft();
+
+        if (!isMounted) return;
+
+        if (draft?.projectId === null) {
+          Alert.alert(
+            "Recover Draft?",
+            "An unfinished project was found. Would you like to recover it?",
+            [
+              {
+                text: "Discard",
+                style: "destructive",
+                onPress: async () => {
+                  try {
+                    await clearDraft();
+                  } catch (error) {
+                    console.error("Failed to clear draft:", error);
+                  } finally {
+                    if (isMounted) {
+                      setIsEditorReady(true);
+                    }
+                  }
+                },
+              },
+              {
+                text: "Recover",
+                onPress: () => {
+                  if (!isMounted) return;
+
+                  restoreDraft(draft);
+                  setIsEditorReady(true);
+                },
+              },
+            ],
+          );
+
+          return;
+        }
+
+        setIsEditorReady(true);
+      } catch (error) {
+        console.error("Failed to initialize editor:", error);
+
+        if (isMounted) {
+          setIsEditorReady(true);
+        }
+      }
+    };
+
+    void initializeEditor();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [routeProjectId]);
+
   const handleImageSelected = (image: SelectedImage) => {
     const orientation = getImageOrientation(image.width, image.height);
 
     setSelectedImage(image);
     setImageOrientation(orientation);
 
-    // Reset dependent features
     setDrawingSurface(null);
     setGridCalculation(null);
 
-    // Reset image effects for the new image
-    setImageEffects({
-      ...DEFAULT_IMAGE_EFFECTS,
-    });
-
-    setGridStyling({
-      ...DEFAULT_GRID_STYLING,
-    });
+    setImageEffects({ ...DEFAULT_IMAGE_EFFECTS });
+    setGridStyling({ ...DEFAULT_GRID_STYLING });
   };
 
   const handleImageCleared = () => {
@@ -82,19 +288,12 @@ export default function NewProjectScreen() {
     setDrawingSurface(null);
     setGridCalculation(null);
 
-    setImageEffects({
-      ...DEFAULT_IMAGE_EFFECTS,
-    });
-
-    setGridStyling({
-      ...DEFAULT_GRID_STYLING,
-    });
+    setImageEffects({ ...DEFAULT_IMAGE_EFFECTS });
+    setGridStyling({ ...DEFAULT_GRID_STYLING });
   };
 
   const handleSurfaceChange = (surface: DrawingSurface | null) => {
     setDrawingSurface(surface);
-
-    // Surface changes invalidate grid calculation
     setGridCalculation(null);
   };
 
@@ -103,11 +302,179 @@ export default function NewProjectScreen() {
   };
 
   const getInitialSurfaceOrientation = (): SurfaceOrientation => {
-    if (imageOrientation === "landscape") {
-      return "landscape";
+    return imageOrientation === "landscape" ? "landscape" : "portrait";
+  };
+
+  // Debounced draft autosave.
+  useEffect(() => {
+    if (!isEditorReady) return;
+
+    if (skipNextAutosave.current) {
+      skipNextAutosave.current = false;
+      return;
     }
 
-    return "portrait";
+    const sequence = ++saveSequence.current;
+
+    const timeoutId = setTimeout(() => {
+      const runAutosave = async () => {
+        try {
+          setDraftStatus("saving");
+
+          let imageForDraft = selectedImage;
+
+          if (selectedImage) {
+            const persistedUri = await persistProjectImage(
+              projectId ?? "draft",
+              selectedImage.uri,
+            );
+
+            imageForDraft = {
+              ...selectedImage,
+              uri: persistedUri,
+            };
+          }
+
+          // Discard outdated work before writing the draft.
+          if (sequence !== saveSequence.current) return;
+
+          const draft = createProjectDraft({
+            projectId,
+            projectName,
+            image: imageForDraft,
+            drawingSurface,
+            gridCalculation,
+            imageEffects,
+            gridStyling,
+          });
+
+          await saveDraft(draft);
+
+          if (sequence === saveSequence.current) {
+            setDraftStatus("saved");
+          }
+        } catch (error) {
+          console.error("Failed to autosave draft:", error);
+
+          if (sequence === saveSequence.current) {
+            setDraftStatus("error");
+          }
+        }
+      };
+
+      void runAutosave();
+    }, 800);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    isEditorReady,
+    projectId,
+    projectName,
+    selectedImage,
+    drawingSurface,
+    gridCalculation,
+    imageEffects,
+    gridStyling,
+  ]);
+
+  const handleSaveProject = async () => {
+    if (
+      isSavingRef.current ||
+      !selectedImage ||
+      !drawingSurface ||
+      !gridCalculation
+    ) {
+      return;
+    }
+
+    isSavingRef.current = true;
+    setIsSaving(true);
+
+    try {
+      const projectData = {
+        name: projectName.trim() || DEFAULT_PROJECT_NAME,
+        image: selectedImage,
+        drawingSurface,
+        gridCalculation,
+        imageEffects,
+        gridStyling,
+      };
+
+      if (projectId) {
+        const existingProject = await getProjectById(projectId);
+
+        if (!existingProject) {
+          throw new Error("Project no longer exists.");
+        }
+
+        const persistedImageUri = await persistProjectImage(
+          existingProject.id,
+          selectedImage.uri,
+        );
+
+        const updatedProject = updateProjectTimestamp({
+          ...existingProject,
+          ...projectData,
+          image: {
+            ...selectedImage,
+            uri: persistedImageUri,
+          },
+        });
+
+        await updateStoredProject(updatedProject);
+
+        if (existingProject.image.uri !== persistedImageUri) {
+          try {
+            await deletePersistedProjectImage(existingProject.image.uri);
+          } catch (cleanupError) {
+            console.error(
+              "Project saved, but old image cleanup failed:",
+              cleanupError,
+            );
+          }
+        }
+      } else {
+        const newProject = createProject(projectData);
+
+        const persistedImageUri = await persistProjectImage(
+          newProject.id,
+          newProject.image.uri,
+        );
+
+        const projectWithPersistedImage = {
+          ...newProject,
+          image: {
+            ...newProject.image,
+            uri: persistedImageUri,
+          },
+        };
+
+        await createStoredProject(projectWithPersistedImage);
+
+        // Prevent the projectId update from recreating the cleared draft.
+        skipNextAutosave.current = true;
+        setProjectId(projectWithPersistedImage.id);
+      }
+
+      // Invalidate pending autosaves and clear the draft after success.
+      saveSequence.current += 1;
+      await clearDraft();
+      setDraftStatus("idle");
+
+      Alert.alert("Saved", "Your project was saved successfully.");
+    } catch (error) {
+      console.error("Failed to save project:", error);
+
+      Alert.alert(
+        "Save Failed",
+        error instanceof Error
+          ? error.message
+          : "Unable to save the project. Your draft has been retained.",
+      );
+    } finally {
+      isSavingRef.current = false;
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -116,7 +483,6 @@ export default function NewProjectScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>New Project</Text>
 
@@ -126,16 +492,13 @@ export default function NewProjectScreen() {
           </Text>
         </View>
 
-        {/* Feature 1 — Image Picker */}
         <ImagePickerSection
           onImageSelected={handleImageSelected}
           onImageCleared={handleImageCleared}
         />
 
-        {/* Image selected */}
         {selectedImage && imageOrientation ? (
           <>
-            {/* Image Information */}
             <View style={styles.imageDetails}>
               <Text style={styles.sectionLabel}>Reference Image</Text>
 
@@ -150,28 +513,26 @@ export default function NewProjectScreen() {
 
             <View style={styles.sectionSeparator} />
 
-            {/* Feature 2 + 3 — Orientation / Drawing Surface */}
             <DrawingSurfaceSection
               key={selectedImage.uri}
               initialOrientation={getInitialSurfaceOrientation()}
+              restoredSurface={drawingSurface}
               onSurfaceChange={handleSurfaceChange}
             />
 
-            {/* Drawing Surface Result */}
             {drawingSurface ? (
               <>
                 <View style={styles.sectionSeparator} />
 
-                {/* Feature 4 — Grid Calculation */}
                 <GridSettingsSection
                   key={`${drawingSurface.type}-${drawingSurface.orientation}`}
                   surface={drawingSurface}
+                  restoredCalculation={gridCalculation}
                   onGridChange={handleGridChange}
                 />
               </>
             ) : null}
 
-            {/* Grid Calculation Result */}
             {gridCalculation ? (
               <View style={styles.readyContainer}>
                 <Text style={styles.readyTitle}>Grid Ready</Text>
@@ -186,7 +547,6 @@ export default function NewProjectScreen() {
           </>
         ) : null}
 
-        {/* Feature 6 — Image Effects + Feature 5 — Grid Preview */}
         {selectedImage && drawingSurface && gridCalculation ? (
           <>
             <View style={styles.sectionSeparator} />
@@ -202,7 +562,7 @@ export default function NewProjectScreen() {
               styling={gridStyling}
               onChange={setGridStyling}
             />
-            {/* Feature 5 + 5.1 + 6 */}
+
             <GridPreviewSection
               image={selectedImage}
               surface={drawingSurface}
@@ -213,7 +573,6 @@ export default function NewProjectScreen() {
           </>
         ) : null}
 
-        {/* Drawing Surface Summary */}
         {drawingSurface ? (
           <View style={styles.readyContainer}>
             <Text style={styles.readyTitle}>Drawing Surface Ready</Text>
@@ -224,6 +583,31 @@ export default function NewProjectScreen() {
             </Text>
           </View>
         ) : null}
+
+        <View style={styles.projectNameSection}>
+          <Text style={styles.projectNameLabel}>Project Name</Text>
+
+          <TextInput
+            value={projectName}
+            onChangeText={setProjectName}
+            placeholder="Enter project name"
+            autoCapitalize="words"
+            maxLength={80}
+            style={styles.projectNameInput}
+          />
+
+          <Text>
+            {draftStatus === "saving" && "Saving draft..."}
+            {draftStatus === "saved" && "Draft saved"}
+            {draftStatus === "error" && "Draft could not be saved"}
+          </Text>
+
+          <AppButton
+            title={isSaving ? "Saving..." : "Save Project"}
+            onPress={handleSaveProject}
+            disabled={isSaving}
+          />
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -304,5 +688,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     color: COLORS.textSecondary,
+  },
+  projectNameSection: {
+    marginTop: 30,
+    gap: 12,
+  },
+
+  projectNameLabel: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textSecondary,
+  },
+
+  projectNameInput: {
+    padding: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    fontSize: 14,
+    color: COLORS.textPrimary,
   },
 });
