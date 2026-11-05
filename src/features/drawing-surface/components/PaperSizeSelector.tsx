@@ -2,12 +2,17 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { COLORS } from "@/src/constants/colors";
 
-import { PaperType } from "../drawing-surface.types";
+import type { PaperType } from "../drawing-surface.types";
 
 type PaperSizeSelectorProps = {
   selectedPaper: PaperType | null;
   onSelect: (paper: PaperType) => void;
 };
+
+const CYAN = "#00E5FF";
+const PURPLE = "#3B0A6B";
+const VIOLET = "#6A2BB8";
+const CARD_BACKGROUND = "#10091A";
 
 const PAPER_OPTIONS: PaperType[] = ["A5", "A4", "A3", "A2", "A1", "CUSTOM"];
 
@@ -17,35 +22,53 @@ export function PaperSizeSelector({
 }: PaperSizeSelectorProps) {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Paper Size</Text>
-
-      <Text style={styles.description}>
-        Select the size of your physical drawing surface.
-      </Text>
-
       <View style={styles.options}>
         {PAPER_OPTIONS.map((paper) => {
+          const isCustom = paper === "CUSTOM";
           const isSelected = selectedPaper === paper;
 
           return (
             <Pressable
               key={paper}
-              style={[styles.option, isSelected && styles.selectedOption]}
-              onPress={() => onSelect(paper)}
+              style={[
+                styles.option,
+                isSelected && styles.selectedOption,
+                isCustom && styles.disabledOption,
+              ]}
+              onPress={() => {
+                if (!isCustom) {
+                  onSelect(paper);
+                }
+              }}
+              disabled={isCustom}
               accessibilityRole="button"
-              accessibilityLabel={`Select ${paper} paper size`}
+              accessibilityLabel={
+                isCustom
+                  ? "Custom paper dimensions coming soon"
+                  : `Select ${paper} paper size`
+              }
               accessibilityState={{
                 selected: isSelected,
+                disabled: isCustom,
               }}
             >
               <Text
                 style={[
                   styles.optionText,
                   isSelected && styles.selectedOptionText,
+                  isCustom && styles.disabledOptionText,
                 ]}
               >
-                {paper === "CUSTOM" ? "Custom" : paper}
+                {isCustom ? "Custom" : paper}
               </Text>
+
+              {isCustom ? <Text style={styles.comingSoon}>SOON</Text> : null}
+
+              {isSelected && !isCustom ? (
+                <View style={styles.selectedIndicator}>
+                  <Text style={styles.checkmark}>✓</Text>
+                </View>
+              ) : null}
             </Pressable>
           );
         })}
@@ -59,20 +82,6 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  title: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-
-  description: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-
   options: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -80,29 +89,65 @@ const styles = StyleSheet.create({
   },
 
   option: {
-    minWidth: 72,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    flexGrow: 1,
+    flexBasis: "27%",
+    minWidth: 70,
+    minHeight: 76,
+    paddingHorizontal: 12,
+    paddingVertical: 13,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    borderColor: VIOLET,
+    backgroundColor: CARD_BACKGROUND,
+    position: "relative",
   },
 
   selectedOption: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary,
+    borderColor: CYAN,
+    borderWidth: 2,
+    backgroundColor: CYAN,
+  },
+
+  disabledOption: {
+    backgroundColor: PURPLE,
+    borderColor: VIOLET,
+    opacity: 0.65,
   },
 
   optionText: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    fontWeight: "600",
+    color: COLORS.textPrimary,
+    fontSize: 17,
+    fontWeight: "800",
   },
 
   selectedOptionText: {
-    color: COLORS.textPrimary,
+    color: "#050505",
+  },
+
+  disabledOptionText: {
+    color: "#D8C5EC",
+    fontSize: 15,
+  },
+
+  selectedIndicator: {
+    position: "absolute",
+    top: 5,
+    right: 7,
+  },
+
+  checkmark: {
+    color: "#050505",
+    fontSize: 11,
+    fontWeight: "900",
+  },
+
+  comingSoon: {
+    color: "#E9D5FF",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.7,
+    marginTop: 3,
   },
 });

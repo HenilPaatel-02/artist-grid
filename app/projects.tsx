@@ -1,9 +1,10 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -20,6 +21,9 @@ import type { Project } from "@/src/features/project/project.types";
 import { AppButton } from "@/src/components/ui/AppButton";
 
 import { deletePersistedProjectImage } from "@/src/features/project/project-image.storage";
+
+import { COLORS } from "@/src/constants/colors";
+import { ProjectThumbnail } from "@/src/features/project/components/ProjectThumbnail";
 
 function formatProjectDate(date: string): string {
   const parsedDate = new Date(date);
@@ -50,7 +54,24 @@ function ProjectCard({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.projectName}>{project.name}</Text>
+      <View style={styles.cardContent}>
+        <ProjectThumbnail uri={project.image.uri} />
+
+        <View style={styles.projectDetails}>
+          <Text style={styles.projectName} numberOfLines={1}>
+            {project.name}
+          </Text>
+
+          <Text style={styles.projectInfo}>
+            {project.gridCalculation.columns} × {project.gridCalculation.rows}{" "}
+            grid
+          </Text>
+
+          <Text style={styles.projectDate}>
+            Updated {formatProjectDate(project.updatedAt)}
+          </Text>
+        </View>
+      </View>
 
       <Text style={styles.projectInfo}>
         {project.gridCalculation.columns} × {project.gridCalculation.rows} grid
@@ -79,6 +100,18 @@ export default function ProjectsScreen() {
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(
     null,
   );
+
+  const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
+
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => {
+      const dateA = new Date(a.updatedAt).getTime();
+      const dateB = new Date(b.updatedAt).getTime();
+
+      return sortOrder === "newest" ? dateB - dateA : dateA - dateB;
+    });
+  }, [projects, sortOrder]);
+
   const loadProjects = async () => {
     try {
       setError(null);
@@ -125,8 +158,8 @@ export default function ProjectsScreen() {
 
   const handleDeleteProject = (project: Project) => {
     Alert.alert(
-      "Delete Project",
-      `Are you sure you want to delete "${project.name}"?`,
+      "Delete Project?",
+      `"${project.name}" will be permanently removed from your saved projects.`,
       [
         {
           text: "Cancel",
@@ -192,25 +225,80 @@ export default function ProjectsScreen() {
 
         {projects.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No projects yet</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>✦</Text>
+            </View>
+
+            <Text style={styles.emptyTitle}>Your canvas is waiting.</Text>
 
             <Text style={styles.emptyDescription}>
-              Create and save your first drawing project.
+              You haven&apos;t saved any projects yet. Start with a reference
+              image and create your first drawing grid.
             </Text>
+
+            <AppButton
+              title="+  Create New Project"
+              onPress={() => router.push("/new-project")}
+              style={styles.emptyButton}
+            />
           </View>
         ) : (
-          <FlatList
-            data={projects}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <ProjectCard
-                project={item}
-                onDelete={handleDeleteProject}
-                isDeleting={deletingProjectId === item.id}
-              />
-            )}
-            contentContainerStyle={styles.list}
-          />
+          <>
+            <View style={styles.sortContainer}>
+              <Text style={styles.sortLabel}>
+                {sortedProjects.length}{" "}
+                {sortedProjects.length === 1 ? "Project" : "Projects"}
+              </Text>
+
+              <View style={styles.sortActions}>
+                <Pressable
+                  onPress={() => setSortOrder("newest")}
+                  style={[
+                    styles.sortButton,
+                    sortOrder === "newest" && styles.sortButtonActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.sortButtonText,
+                      sortOrder === "newest" && styles.sortButtonTextActive,
+                    ]}
+                  >
+                    Newest
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setSortOrder("oldest")}
+                  style={[
+                    styles.sortButton,
+                    sortOrder === "oldest" && styles.sortButtonActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.sortButtonText,
+                      sortOrder === "oldest" && styles.sortButtonTextActive,
+                    ]}
+                  >
+                    Oldest
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+            <FlatList
+              data={sortedProjects}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <ProjectCard
+                  project={item}
+                  onDelete={handleDeleteProject}
+                  isDeleting={deletingProjectId === item.id}
+                />
+              )}
+              contentContainerStyle={styles.list}
+            />
+          </>
         )}
       </View>
     </Screen>
@@ -237,26 +325,36 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: COLORS.border,
+  },
+  cardContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
   },
 
+  projectDetails: {
+    flex: 1,
+    gap: 5,
+  },
   projectName: {
     fontSize: 18,
     fontWeight: "600",
+    color: COLORS.textPrimary,
   },
 
   projectInfo: {
     marginTop: 6,
     fontSize: 14,
-    color: "#6B7280",
+    color: COLORS.textSecondary,
   },
 
   projectDate: {
     marginTop: 4,
     fontSize: 12,
-    color: "#9CA3AF",
+    color: COLORS.textSecondary,
   },
 
   center: {
@@ -283,17 +381,83 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  emptyIconContainer: {
+    width: 76,
+    height: 76,
+    borderRadius: 24,
+    backgroundColor: COLORS.amethyst,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.violet,
+  },
+
+  emptyIcon: {
+    fontSize: 34,
+    color: COLORS.highlight,
+  },
+
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: "600",
+    fontSize: 21,
+    fontWeight: "800",
+    color: COLORS.textPrimary,
+    textAlign: "center",
   },
 
   emptyDescription: {
-    marginTop: 8,
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    lineHeight: 21,
     textAlign: "center",
-    color: "#6B7280",
+    maxWidth: 280,
   },
 
+  emptyButton: {
+    width: "100%",
+    marginTop: 8,
+  },
+
+  sortContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+
+  sortLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+
+  sortActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  sortButton: {
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  sortButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+
+  sortButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+
+  sortButtonTextActive: {
+    color: COLORS.black,
+  },
   actions: {
     flexDirection: "row",
     gap: 10,

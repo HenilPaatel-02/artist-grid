@@ -104,6 +104,12 @@ export default function NewProjectScreen() {
     "idle" | "saving" | "saved" | "error"
   >("idle");
 
+  const canSaveProject =
+    Boolean(selectedImage) &&
+    Boolean(drawingSurface) &&
+    Boolean(gridCalculation) &&
+    !isSaving;
+
   const saveSequence = useRef(0);
   const skipNextAutosave = useRef(false);
   const isSavingRef = useRef(false);
@@ -225,13 +231,27 @@ export default function NewProjectScreen() {
                 text: "Discard",
                 style: "destructive",
                 onPress: async () => {
+                  // Invalidate any autosave already in progress.
+                  saveSequence.current += 1;
+
                   try {
                     await clearDraft();
-                  } catch (error) {
-                    console.error("Failed to clear draft:", error);
-                  } finally {
+
                     if (isMounted) {
+                      setDraftStatus("idle");
                       setIsEditorReady(true);
+                    }
+                  } catch (error) {
+                    console.error("Failed to discard draft:", error);
+
+                    if (isMounted) {
+                      setDraftStatus("error");
+                      setIsEditorReady(true);
+
+                      Alert.alert(
+                        "Discard Failed",
+                        "The draft could not be deleted. Please try again.",
+                      );
                     }
                   }
                 },
@@ -308,6 +328,20 @@ export default function NewProjectScreen() {
   // Debounced draft autosave.
   useEffect(() => {
     if (!isEditorReady) return;
+
+    const hasDraftContent =
+      Boolean(projectId) ||
+      Boolean(selectedImage) ||
+      Boolean(drawingSurface) ||
+      Boolean(gridCalculation) ||
+      projectName.trim() !== DEFAULT_PROJECT_NAME;
+
+    if (!hasDraftContent) {
+      // Invalidate older autosaves when the editor becomes empty.
+      saveSequence.current += 1;
+      setDraftStatus("idle");
+      return;
+    }
 
     if (skipNextAutosave.current) {
       skipNextAutosave.current = false;
@@ -493,6 +527,7 @@ export default function NewProjectScreen() {
         </View>
 
         <ImagePickerSection
+          selectedImage={selectedImage}
           onImageSelected={handleImageSelected}
           onImageCleared={handleImageCleared}
         />
@@ -563,6 +598,8 @@ export default function NewProjectScreen() {
               onChange={setGridStyling}
             />
 
+            <View style={styles.sectionSeparator} />
+
             <GridPreviewSection
               image={selectedImage}
               surface={drawingSurface}
@@ -571,17 +608,6 @@ export default function NewProjectScreen() {
               gridStyling={gridStyling}
             />
           </>
-        ) : null}
-
-        {drawingSurface ? (
-          <View style={styles.readyContainer}>
-            <Text style={styles.readyTitle}>Drawing Surface Ready</Text>
-
-            <Text style={styles.readyDescription}>
-              {capitalize(drawingSurface.type)} · {drawingSurface.size.width} ×{" "}
-              {drawingSurface.size.height} {drawingSurface.size.unit}
-            </Text>
-          </View>
         ) : null}
 
         <View style={styles.projectNameSection}>
@@ -596,16 +622,27 @@ export default function NewProjectScreen() {
             style={styles.projectNameInput}
           />
 
-          <Text>
+          <Text
+            style={{
+              color:
+                draftStatus === "error"
+                  ? COLORS.error
+                  : draftStatus === "saved"
+                    ? COLORS.success
+                    : COLORS.textSecondary,
+              fontSize: 12,
+              fontWeight: "600",
+            }}
+          >
             {draftStatus === "saving" && "Saving draft..."}
-            {draftStatus === "saved" && "Draft saved"}
+            {draftStatus === "saved" && "✓ Draft saved"}
             {draftStatus === "error" && "Draft could not be saved"}
           </Text>
 
           <AppButton
             title={isSaving ? "Saving..." : "Save Project"}
             onPress={handleSaveProject}
-            disabled={isSaving}
+            disabled={!canSaveProject}
           />
         </View>
       </ScrollView>

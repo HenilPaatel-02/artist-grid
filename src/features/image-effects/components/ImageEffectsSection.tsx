@@ -4,6 +4,16 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { IMAGE_EFFECT_LIMITS } from "../image-effects.constants";
 import { DEFAULT_IMAGE_EFFECTS, ImageEffects } from "../image-effects.types";
 
+const PALETTE = {
+  surface: "#10091A",
+  elevated: "#1A1026",
+  border: "#352443",
+  cyan: "#00E5FF",
+  text: "#F4F0FA",
+  muted: "#A99BB8",
+  track: "#51445E",
+} as const;
+
 type Props = {
   effects: ImageEffects;
   onChange: (effects: ImageEffects) => void;
@@ -33,11 +43,13 @@ export function ImageEffectsSection({ effects, onChange }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <Text style={styles.sectionNumber}>04</Text>
+
+        <View style={styles.headerText}>
           <Text style={styles.title}>Image Effects</Text>
 
           <Text style={styles.subtitle}>
-            Adjust the reference image without changing the grid.
+            Adjust your reference image without changing the grid.
           </Text>
         </View>
 
@@ -45,6 +57,9 @@ export function ImageEffectsSection({ effects, onChange }: Props) {
           onPress={resetEffects}
           disabled={isDefault}
           style={[styles.resetButton, isDefault && styles.resetButtonDisabled]}
+          accessibilityRole="button"
+          accessibilityLabel="Reset image effects"
+          accessibilityState={{ disabled: isDefault }}
         >
           <Text
             style={[styles.resetText, isDefault && styles.resetTextDisabled]}
@@ -54,50 +69,60 @@ export function ImageEffectsSection({ effects, onChange }: Props) {
         </Pressable>
       </View>
 
-      <EffectSlider
-        label="Brightness"
-        value={effects.brightness}
-        min={IMAGE_EFFECT_LIMITS.brightness.min}
-        max={IMAGE_EFFECT_LIMITS.brightness.max}
-        step={IMAGE_EFFECT_LIMITS.brightness.step}
-        onChange={(value) => updateEffect("brightness", value)}
-      />
+      <View style={styles.effectsCard}>
+        <EffectSlider
+          label="Brightness"
+          value={effects.brightness}
+          min={IMAGE_EFFECT_LIMITS.brightness.min}
+          max={IMAGE_EFFECT_LIMITS.brightness.max}
+          step={IMAGE_EFFECT_LIMITS.brightness.step}
+          onChange={(value) => updateEffect("brightness", value)}
+        />
 
-      <EffectSlider
-        label="Contrast"
-        value={effects.contrast}
-        min={IMAGE_EFFECT_LIMITS.contrast.min}
-        max={IMAGE_EFFECT_LIMITS.contrast.max}
-        step={IMAGE_EFFECT_LIMITS.contrast.step}
-        onChange={(value) => updateEffect("contrast", value)}
-      />
+        <View style={styles.divider} />
 
-      <EffectSlider
-        label="Saturation"
-        value={effects.saturation}
-        min={IMAGE_EFFECT_LIMITS.saturation.min}
-        max={IMAGE_EFFECT_LIMITS.saturation.max}
-        step={IMAGE_EFFECT_LIMITS.saturation.step}
-        onChange={(value) => updateEffect("saturation", value)}
-      />
+        <EffectSlider
+          label="Contrast"
+          value={effects.contrast}
+          min={IMAGE_EFFECT_LIMITS.contrast.min}
+          max={IMAGE_EFFECT_LIMITS.contrast.max}
+          step={IMAGE_EFFECT_LIMITS.contrast.step}
+          onChange={(value) => updateEffect("contrast", value)}
+        />
 
-      <EffectSlider
-        label="Grayscale"
-        value={effects.grayscale}
-        min={IMAGE_EFFECT_LIMITS.grayscale.min}
-        max={IMAGE_EFFECT_LIMITS.grayscale.max}
-        step={IMAGE_EFFECT_LIMITS.grayscale.step}
-        onChange={(value) => updateEffect("grayscale", value)}
-      />
+        <View style={styles.divider} />
 
-      <EffectSlider
-        label="Opacity"
-        value={effects.opacity}
-        min={IMAGE_EFFECT_LIMITS.opacity.min}
-        max={IMAGE_EFFECT_LIMITS.opacity.max}
-        step={IMAGE_EFFECT_LIMITS.opacity.step}
-        onChange={(value) => updateEffect("opacity", value)}
-      />
+        <EffectSlider
+          label="Saturation"
+          value={effects.saturation}
+          min={IMAGE_EFFECT_LIMITS.saturation.min}
+          max={IMAGE_EFFECT_LIMITS.saturation.max}
+          step={IMAGE_EFFECT_LIMITS.saturation.step}
+          onChange={(value) => updateEffect("saturation", value)}
+        />
+
+        <View style={styles.divider} />
+
+        <EffectSlider
+          label="Grayscale"
+          value={effects.grayscale}
+          min={IMAGE_EFFECT_LIMITS.grayscale.min}
+          max={IMAGE_EFFECT_LIMITS.grayscale.max}
+          step={IMAGE_EFFECT_LIMITS.grayscale.step}
+          onChange={(value) => updateEffect("grayscale", value)}
+        />
+
+        <View style={styles.divider} />
+
+        <EffectSlider
+          label="Opacity"
+          value={effects.opacity}
+          min={IMAGE_EFFECT_LIMITS.opacity.min}
+          max={IMAGE_EFFECT_LIMITS.opacity.max}
+          step={IMAGE_EFFECT_LIMITS.opacity.step}
+          onChange={(value) => updateEffect("opacity", value)}
+        />
+      </View>
     </View>
   );
 }
@@ -134,9 +159,10 @@ function EffectSlider({
         maximumValue={max}
         step={step}
         onValueChange={onChange}
-        minimumTrackTintColor="#222222"
-        maximumTrackTintColor="#D1D5DB"
-        thumbTintColor="#222222"
+        minimumTrackTintColor={PALETTE.cyan}
+        maximumTrackTintColor={PALETTE.track}
+        thumbTintColor={PALETTE.cyan}
+        accessibilityLabel={`${label} adjustment`}
       />
 
       <View style={styles.rangeRow}>
@@ -149,18 +175,34 @@ function EffectSlider({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 20,
-    paddingVertical: 16,
+    width: "100%",
+    gap: 16,
   },
 
   header: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
+    alignItems: "flex-start",
+    gap: 12,
+  },
+
+  headerText: {
+    flex: 1,
+    gap: 5,
+  },
+
+  sectionNumber: {
+    color: "#00E5FF",
+    fontSize: 13,
+    fontWeight: "800",
+    backgroundColor: "#3B0A6B",
+    overflow: "hidden",
+    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
 
   title: {
+    color: PALETTE.text,
     fontSize: 18,
     fontWeight: "700",
   },
@@ -168,7 +210,8 @@ const styles = StyleSheet.create({
   subtitle: {
     marginTop: 4,
     fontSize: 13,
-    color: "#6B7280",
+    lineHeight: 19,
+    color: PALETTE.muted,
   },
 
   resetButton: {
@@ -176,10 +219,11 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 8,
+    borderColor: PALETTE.border,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: PALETTE.elevated,
   },
 
   resetButtonDisabled: {
@@ -187,12 +231,22 @@ const styles = StyleSheet.create({
   },
 
   resetText: {
+    color: PALETTE.cyan,
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   resetTextDisabled: {
-    color: "#9CA3AF",
+    color: PALETTE.muted,
+  },
+
+  effectsCard: {
+    backgroundColor: PALETTE.surface,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    borderRadius: 14,
+    padding: 14,
+    gap: 14,
   },
 
   control: {
@@ -206,15 +260,17 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 14,
+    color: PALETTE.text,
+    fontSize: 13,
     fontWeight: "600",
   },
 
   value: {
     minWidth: 42,
     textAlign: "right",
+    color: PALETTE.cyan,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
   },
 
   slider: {
@@ -229,6 +285,11 @@ const styles = StyleSheet.create({
 
   rangeText: {
     fontSize: 11,
-    color: "#9CA3AF",
+    color: PALETTE.muted,
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: PALETTE.border,
   },
 });

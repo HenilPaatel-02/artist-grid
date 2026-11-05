@@ -1,10 +1,13 @@
 import { Pressable, StyleSheet, Text, ViewStyle } from "react-native";
 
+import { COLORS } from "@/src/constants/colors";
+
 type AppButtonProps = {
   title: string;
   onPress: () => void;
   disabled?: boolean;
   style?: ViewStyle;
+  variant?: "primary" | "secondary";
 };
 
 export function AppButton({
@@ -12,11 +15,15 @@ export function AppButton({
   onPress,
   disabled = false,
   style,
+  variant = "primary",
 }: AppButtonProps) {
+  const isPrimary = variant === "primary";
+
   return (
     <Pressable
       style={({ pressed }) => [
         styles.button,
+        isPrimary ? styles.primary : styles.secondary,
         pressed && styles.pressed,
         disabled && styles.disabled,
         style,
@@ -25,24 +32,42 @@ export function AppButton({
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityState={{ disabled }}
     >
-      <Text style={styles.title}>{title}</Text>
+      <Text
+        style={[
+          styles.title,
+          isPrimary ? styles.primaryTitle : styles.secondaryTitle,
+        ]}
+      >
+        {title}
+      </Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   button: {
-    minHeight: 52,
+    minHeight: 54,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 24,
-    borderRadius: 12,
-    backgroundColor: "#7C3AED",
+    borderRadius: 16,
+  },
+
+  primary: {
+    backgroundColor: COLORS.primary,
+  },
+
+  secondary: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
 
   pressed: {
-    opacity: 0.8,
+    opacity: 0.75,
+    transform: [{ scale: 0.98 }],
   },
 
   disabled: {
@@ -50,8 +75,15 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
+  },
+
+  primaryTitle: {
+    color: COLORS.black,
+  },
+
+  secondaryTitle: {
+    color: COLORS.textPrimary,
   },
 });
