@@ -1,14 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { COLORS } from "@/src/constants/colors";
-
 import { GridCanvasStyle } from "../grid-canvas.types";
 
-type GridStyleControlsProps = {
-  value: GridCanvasStyle;
-
-  onChange: (value: GridCanvasStyle) => void;
-};
+const PALETTE = {
+  surface: "#10091A",
+  elevated: "#1A1026",
+  border: "#352443",
+  cyan: "#00E5FF",
+  text: "#F4F0FA",
+  muted: "#A99BB8",
+} as const;
 
 const GRID_COLORS = [
   "#FFFFFF",
@@ -21,19 +22,18 @@ const GRID_COLORS = [
 
 const STROKE_WIDTHS = [0.5, 1, 1.5, 2, 3] as const;
 
+type GridStyleControlsProps = {
+  value: GridCanvasStyle;
+  onChange: (value: GridCanvasStyle) => void;
+};
+
 export function GridStyleControls({ value, onChange }: GridStyleControlsProps) {
   const handleColorChange = (color: string) => {
-    onChange({
-      ...value,
-      color,
-    });
+    onChange({ ...value, color });
   };
 
   const handleStrokeChange = (strokeWidth: number) => {
-    onChange({
-      ...value,
-      strokeWidth,
-    });
+    onChange({ ...value, strokeWidth });
   };
 
   return (
@@ -51,18 +51,16 @@ export function GridStyleControls({ value, onChange }: GridStyleControlsProps) {
               key={color}
               style={[
                 styles.colorButton,
-                {
-                  backgroundColor: color,
-                },
+                { backgroundColor: color },
                 isSelected && styles.selectedColor,
               ]}
               onPress={() => handleColorChange(color)}
               accessibilityRole="button"
               accessibilityLabel={`Select grid color ${color}`}
-              accessibilityState={{
-                selected: isSelected,
-              }}
-            />
+              accessibilityState={{ selected: isSelected }}
+            >
+              {isSelected && <Text style={styles.selectedMark}>✓</Text>}
+            </Pressable>
           );
         })}
       </View>
@@ -80,9 +78,7 @@ export function GridStyleControls({ value, onChange }: GridStyleControlsProps) {
               onPress={() => handleStrokeChange(strokeWidth)}
               accessibilityRole="button"
               accessibilityLabel={`Select ${strokeWidth} pixel grid stroke`}
-              accessibilityState={{
-                selected: isSelected,
-              }}
+              accessibilityState={{ selected: isSelected }}
             >
               <Text
                 style={[
@@ -106,22 +102,23 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: COLORS.textPrimary,
-    fontSize: 20,
+    color: PALETTE.text,
+    fontSize: 18,
     fontWeight: "700",
     marginBottom: 20,
   },
 
   label: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: PALETTE.muted,
+    fontSize: 13,
+    fontWeight: "600",
     marginBottom: 12,
   },
 
   colorOptions: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 14,
     marginBottom: 24,
   },
 
@@ -130,12 +127,20 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: PALETTE.border,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   selectedColor: {
-    borderWidth: 4,
-    borderColor: COLORS.primary,
+    borderWidth: 3,
+    borderColor: PALETTE.cyan,
+  },
+
+  selectedMark: {
+    color: "#3B0A6B",
+    fontWeight: "900",
+    fontSize: 18,
   },
 
   strokeOptions: {
@@ -151,21 +156,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    borderColor: PALETTE.border,
+    backgroundColor: PALETTE.elevated,
   },
 
   selectedStroke: {
-    borderColor: COLORS.primary,
+    borderColor: PALETTE.cyan,
+    backgroundColor: "#17232D",
   },
 
   strokeText: {
-    color: COLORS.textSecondary,
+    color: PALETTE.muted,
     fontSize: 14,
     fontWeight: "600",
   },
 
   selectedStrokeText: {
-    color: COLORS.textPrimary,
+    color: PALETTE.cyan,
   },
 });

@@ -1,13 +1,27 @@
 export const COLORS = {
-  background: "#121212",
-  surface: "#1C1C1E",
-  primary: "#7C3AED",
+  // Main backgrounds
+  background: "#050505",
+  surface: "#10091A",
+  surfaceElevated: "#190D27",
 
-  textPrimary: "#FFFFFF",
-  textSecondary: "#A1A1AA",
+  // Brand colors
+  primary: "#00E5FF",
+  highlight: "#F2B84B",
+  amethyst: "#3B0A6B",
+  violet: "#6A2BB8",
 
-  border: "#2C2C2E",
+  // Text
+  textPrimary: "#F4F0FA",
+  textSecondary: "#B9AEC8",
 
-  error: "#EF4444",
+  // Borders
+  border: "#321A49",
+
+  // Feedback
+  error: "#FF5C70",
   success: "#22C55E",
+
+  // Additional semantic colors
+  white: "#FFFFFF",
+  black: "#050505",
 } as const;
