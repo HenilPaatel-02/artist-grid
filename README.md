@@ -221,16 +221,16 @@ Platform availability depends on the native APIs and current app configuration; 
 
 ## Product and engineering priorities
 
-| Priority | Improvement | Why it matters | MVP decision |
-|---|---|---|---|
-| P0 | Verify create → save → reopen → export end-to-end | This is the product’s core promise | Ship only when reliable |
-| P0 | Remove/hide unimplemented modes and correct feature claims | Prevents user confusion and dead ends | Required |
-| P0 | Validate image persistence, draft recovery, and failure states | Protects user work | Required |
-| P1 | Rework the long editor into a clear, progressive flow | Reduces cognitive load and abandonment | Lightweight version in MVP |
-| P1 | Improve project cards with thumbnails, dimensions, and clear actions | Makes saved work recognizable | If time permits |
-| P1 | Improve control accessibility and live feedback | Makes the tool usable and trustworthy | Required for key controls |
-| P2 | Print-ready layout and saved presets | Adds workflow value but expands scope | Defer unless core is complete |
-| P3 | Cloud sync, accounts, collaboration, doodle-grid mode | Significant product/backend scope | Defer |
+| Priority | Improvement                                                          | Why it matters                         | MVP decision                  |
+| -------- | -------------------------------------------------------------------- | -------------------------------------- | ----------------------------- |
+| P0       | Verify create → save → reopen → export end-to-end                    | This is the product’s core promise     | Ship only when reliable       |
+| P0       | Remove/hide unimplemented modes and correct feature claims           | Prevents user confusion and dead ends  | Required                      |
+| P0       | Validate image persistence, draft recovery, and failure states       | Protects user work                     | Required                      |
+| P1       | Rework the long editor into a clear, progressive flow                | Reduces cognitive load and abandonment | Lightweight version in MVP    |
+| P1       | Improve project cards with thumbnails, dimensions, and clear actions | Makes saved work recognizable          | If time permits               |
+| P1       | Improve control accessibility and live feedback                      | Makes the tool usable and trustworthy  | Required for key controls     |
+| P2       | Print-ready layout and saved presets                                 | Adds workflow value but expands scope  | Defer unless core is complete |
+| P3       | Cloud sync, accounts, collaboration, doodle-grid mode                | Significant product/backend scope      | Defer                         |
 
 ## MVP success measures
 
