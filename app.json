@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ArtistGrid",
-    "slug": "ArtistGrid",
+    "slug": "artistGrid",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -38,8 +38,18 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow ArtistGrid to access your photos.",
+          "savePhotosPermission": "Allow ArtistGrid to save drawing previews to your gallery.",
+          "granularPermissions": ["photo"]
+        }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
