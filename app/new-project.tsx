@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -512,141 +514,154 @@ export default function NewProjectScreen() {
   };
 
   return (
-    <Screen>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+    >
       <ScrollView
-        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>New Project</Text>
+        <Screen>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.header}>
+              <Text style={styles.title}>New Project</Text>
 
-          <Text style={styles.description}>
-            Choose a reference image and configure your physical drawing
-            surface.
-          </Text>
-        </View>
-
-        <ImagePickerSection
-          selectedImage={selectedImage}
-          onImageSelected={handleImageSelected}
-          onImageCleared={handleImageCleared}
-        />
-
-        {selectedImage && imageOrientation ? (
-          <>
-            <View style={styles.imageDetails}>
-              <Text style={styles.sectionLabel}>Reference Image</Text>
-
-              <Text style={styles.imageDimensions}>
-                {selectedImage.width} × {selectedImage.height} px
-              </Text>
-
-              <Text style={styles.imageOrientation}>
-                {capitalize(imageOrientation)}
+              <Text style={styles.description}>
+                Choose a reference image and configure your physical drawing
+                surface.
               </Text>
             </View>
 
-            <View style={styles.sectionSeparator} />
-
-            <DrawingSurfaceSection
-              key={selectedImage.uri}
-              initialOrientation={getInitialSurfaceOrientation()}
-              restoredSurface={drawingSurface}
-              onSurfaceChange={handleSurfaceChange}
+            <ImagePickerSection
+              selectedImage={selectedImage}
+              onImageSelected={handleImageSelected}
+              onImageCleared={handleImageCleared}
             />
 
-            {drawingSurface ? (
+            {selectedImage && imageOrientation ? (
+              <>
+                <View style={styles.imageDetails}>
+                  <Text style={styles.sectionLabel}>Reference Image</Text>
+
+                  <Text style={styles.imageDimensions}>
+                    {selectedImage.width} × {selectedImage.height} px
+                  </Text>
+
+                  <Text style={styles.imageOrientation}>
+                    {capitalize(imageOrientation)}
+                  </Text>
+                </View>
+
+                <View style={styles.sectionSeparator} />
+
+                <DrawingSurfaceSection
+                  key={selectedImage.uri}
+                  initialOrientation={getInitialSurfaceOrientation()}
+                  restoredSurface={drawingSurface}
+                  onSurfaceChange={handleSurfaceChange}
+                />
+
+                {drawingSurface ? (
+                  <>
+                    <View style={styles.sectionSeparator} />
+
+                    <GridSettingsSection
+                      key={`${drawingSurface.type}-${drawingSurface.orientation}`}
+                      surface={drawingSurface}
+                      restoredCalculation={gridCalculation}
+                      onGridChange={handleGridChange}
+                    />
+                  </>
+                ) : null}
+
+                {gridCalculation ? (
+                  <View style={styles.readyContainer}>
+                    <Text style={styles.readyTitle}>Grid Ready</Text>
+
+                    <Text style={styles.readyDescription}>
+                      {gridCalculation.columns} × {gridCalculation.rows} grid ·{" "}
+                      {gridCalculation.cellWidth.toFixed(2)} ×{" "}
+                      {gridCalculation.cellHeight.toFixed(2)} mm cells
+                    </Text>
+                  </View>
+                ) : null}
+              </>
+            ) : null}
+
+            {selectedImage && drawingSurface && gridCalculation ? (
               <>
                 <View style={styles.sectionSeparator} />
 
-                <GridSettingsSection
-                  key={`${drawingSurface.type}-${drawingSurface.orientation}`}
+                <ImageEffectsSection
+                  effects={imageEffects}
+                  onChange={setImageEffects}
+                />
+
+                <View style={styles.sectionSeparator} />
+
+                <GridStylingSection
+                  styling={gridStyling}
+                  onChange={setGridStyling}
+                />
+
+                <View style={styles.sectionSeparator} />
+
+                <GridPreviewSection
+                  image={selectedImage}
                   surface={drawingSurface}
-                  restoredCalculation={gridCalculation}
-                  onGridChange={handleGridChange}
+                  calculation={gridCalculation}
+                  imageEffects={imageEffects}
+                  gridStyling={gridStyling}
                 />
               </>
             ) : null}
 
-            {gridCalculation ? (
-              <View style={styles.readyContainer}>
-                <Text style={styles.readyTitle}>Grid Ready</Text>
+            <View style={styles.projectNameSection}>
+              <Text style={styles.projectNameLabel}>Project Name</Text>
 
-                <Text style={styles.readyDescription}>
-                  {gridCalculation.columns} × {gridCalculation.rows} grid ·{" "}
-                  {gridCalculation.cellWidth.toFixed(2)} ×{" "}
-                  {gridCalculation.cellHeight.toFixed(2)} mm cells
-                </Text>
-              </View>
-            ) : null}
-          </>
-        ) : null}
+              <TextInput
+                value={projectName}
+                onChangeText={setProjectName}
+                placeholder="Enter project name"
+                autoCapitalize="words"
+                maxLength={80}
+                style={styles.projectNameInput}
+              />
 
-        {selectedImage && drawingSurface && gridCalculation ? (
-          <>
-            <View style={styles.sectionSeparator} />
+              <Text
+                style={{
+                  color:
+                    draftStatus === "error"
+                      ? COLORS.error
+                      : draftStatus === "saved"
+                        ? COLORS.success
+                        : COLORS.textSecondary,
+                  fontSize: 12,
+                  fontWeight: "600",
+                }}
+              >
+                {draftStatus === "saving" && "Saving draft..."}
+                {draftStatus === "saved" && "✓ Draft saved"}
+                {draftStatus === "error" && "Draft could not be saved"}
+              </Text>
 
-            <ImageEffectsSection
-              effects={imageEffects}
-              onChange={setImageEffects}
-            />
-
-            <View style={styles.sectionSeparator} />
-
-            <GridStylingSection
-              styling={gridStyling}
-              onChange={setGridStyling}
-            />
-
-            <View style={styles.sectionSeparator} />
-
-            <GridPreviewSection
-              image={selectedImage}
-              surface={drawingSurface}
-              calculation={gridCalculation}
-              imageEffects={imageEffects}
-              gridStyling={gridStyling}
-            />
-          </>
-        ) : null}
-
-        <View style={styles.projectNameSection}>
-          <Text style={styles.projectNameLabel}>Project Name</Text>
-
-          <TextInput
-            value={projectName}
-            onChangeText={setProjectName}
-            placeholder="Enter project name"
-            autoCapitalize="words"
-            maxLength={80}
-            style={styles.projectNameInput}
-          />
-
-          <Text
-            style={{
-              color:
-                draftStatus === "error"
-                  ? COLORS.error
-                  : draftStatus === "saved"
-                    ? COLORS.success
-                    : COLORS.textSecondary,
-              fontSize: 12,
-              fontWeight: "600",
-            }}
-          >
-            {draftStatus === "saving" && "Saving draft..."}
-            {draftStatus === "saved" && "✓ Draft saved"}
-            {draftStatus === "error" && "Draft could not be saved"}
-          </Text>
-
-          <AppButton
-            title={isSaving ? "Saving..." : "Save Project"}
-            onPress={handleSaveProject}
-            disabled={!canSaveProject}
-          />
-        </View>
+              <AppButton
+                title={isSaving ? "Saving..." : "Save Project"}
+                onPress={handleSaveProject}
+                disabled={!canSaveProject}
+              />
+            </View>
+          </ScrollView>
+        </Screen>
       </ScrollView>
-    </Screen>
+    </KeyboardAvoidingView>
   );
 }
 

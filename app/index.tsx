@@ -1,5 +1,6 @@
 import { router, useFocusEffect } from "expo-router";
 import {
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -105,11 +106,13 @@ export default function HomeScreen() {
             <Text style={styles.subtitle}>CREATIVE STUDIO</Text>
           </View>
 
-          <View style={styles.profileCircle}>
-            <Text style={styles.profileText}>A</Text>
-          </View>
+          <Image
+            source={require("../assets/images/logo-mark.png")}
+            style={styles.logoMark}
+            resizeMode="contain"
+            accessibilityLabel="ArtistGrid logo"
+          />
         </View>
-
         {/* Welcome */}
         <View style={styles.welcomeSection}>
           <Text style={styles.welcomeLabel}>YOUR CREATIVE SPACE</Text>
@@ -315,6 +318,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+  },
+
+  logoMark: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
   },
 
   logo: {
