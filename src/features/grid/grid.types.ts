@@ -53,4 +53,26 @@ export type GridCalculation = {
   gridHeight: number;
 
   remainder: GridRemainder;
+
+  // Physical measurements for Cell Size mode.
+  cellSizeMm?: number;
+
+  marginLeftMm?: number;
+  marginTopMm?: number;
+  marginRightMm?: number;
+  marginBottomMm?: number;
+};
+
+export type MeasuredGridResult = {
+  cellSizeMm: number;
+  rows: number;
+  columns: number;
+
+  gridWidthMm: number;
+  gridHeightMm: number;
+
+  marginLeftMm: number;
+  marginTopMm: number;
+  marginRightMm: number;
+  marginBottomMm: number;
 };

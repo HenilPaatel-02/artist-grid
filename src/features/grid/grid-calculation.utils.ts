@@ -62,7 +62,6 @@ const calculateCellSizeGrid = (
   const surfaceHeight = surface.size.height;
 
   const columns = Math.floor(surfaceWidth / cellSizeMm);
-
   const rows = Math.floor(surfaceHeight / cellSizeMm);
 
   if (columns < 1 || rows < 1) {
@@ -71,6 +70,9 @@ const calculateCellSizeGrid = (
 
   const gridWidth = columns * cellSizeMm;
   const gridHeight = rows * cellSizeMm;
+
+  const horizontalMargin = (surfaceWidth - gridWidth) / 2;
+  const verticalMargin = (surfaceHeight - gridHeight) / 2;
 
   return {
     rows,
@@ -89,6 +91,13 @@ const calculateCellSizeGrid = (
       width: surfaceWidth - gridWidth,
       height: surfaceHeight - gridHeight,
     },
+
+    cellSizeMm,
+
+    marginLeftMm: horizontalMargin,
+    marginRightMm: horizontalMargin,
+    marginTopMm: verticalMargin,
+    marginBottomMm: verticalMargin,
   };
 };
 

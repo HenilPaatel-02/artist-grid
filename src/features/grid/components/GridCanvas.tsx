@@ -8,7 +8,7 @@ import {
   Text as SkiaText,
   useCanvasRef,
   useImage,
-  vec
+  vec,
 } from "@shopify/react-native-skia";
 import { useCallback, useEffect, useMemo } from "react";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
@@ -21,7 +21,6 @@ import type { SelectedImage } from "@/src/features/image-picker/image-picker.typ
 import type { ExportSettings } from "@/src/features/export/export.types";
 import type { GridCalculation } from "@/src/features/grid/grid.types";
 import type { GridStyling } from "../grid-styling.types";
-
 
 type GridCanvasProps = {
   image: SelectedImage;
@@ -169,23 +168,44 @@ export function GridCanvas({
     x: activeGridStyling.showRowLabels ? labelSpace : 0,
     y: activeGridStyling.showColumnLabels ? labelSpace : 0,
 
-    width:
-      canvasWidth - (activeGridStyling.showRowLabels ? labelSpace : 0),
+    width: canvasWidth - (activeGridStyling.showRowLabels ? labelSpace : 0),
 
     height:
       canvasHeight - (activeGridStyling.showColumnLabels ? labelSpace : 0),
   };
 
-  const cellWidth = drawingRect.width / columns;
-  const cellHeight = drawingRect.height / rows;
+  // GRID RECT — physical measurements mapped to canvas pixels
+
+  const isMeasuredGrid = calculation.cellSizeMm !== undefined;
+
+  let gridRect: Rect = drawingRect;
+
+  if (isMeasuredGrid) {
+    const scale = Math.min(
+      drawingRect.width / surfaceWidth,
+      drawingRect.height / surfaceHeight,
+    );
+
+    const paperPixelWidth = surfaceWidth * scale;
+    const paperPixelHeight = surfaceHeight * scale;
+
+    const paperX = drawingRect.x + (drawingRect.width - paperPixelWidth) / 2;
+
+    const paperY = drawingRect.y + (drawingRect.height - paperPixelHeight) / 2;
+
+    gridRect = {
+      x: paperX + (calculation.marginLeftMm ?? 0) * scale,
+      y: paperY + (calculation.marginTopMm ?? 0) * scale,
+      width: calculation.gridWidth * scale,
+      height: calculation.gridHeight * scale,
+    };
+  }
+
+  const cellWidth = gridRect.width / columns;
+  const cellHeight = gridRect.height / rows;
 
   // IMAGE PLACEMENT
-
-  const imageRect = calculateContainRect(
-    image.width,
-    image.height,
-    drawingRect,
-  );
+  const imageRect = calculateContainRect(image.width, image.height, gridRect);
 
   /*
    * ==================================================
@@ -333,13 +353,13 @@ export function GridCanvas({
               {Array.from({
                 length: columns + 1,
               }).map((_, index) => {
-                const x = drawingRect.x + index * cellWidth;
+                const x = gridRect.x + index * cellWidth;
 
                 return (
                   <Line
                     key={`vertical-${index}`}
-                    p1={vec(x, drawingRect.y)}
-                    p2={vec(x, drawingRect.y + drawingRect.height)}
+                    p1={vec(x, gridRect.y)}
+                    p2={vec(x, gridRect.y + gridRect.height)}
                     color={gridColor}
                     strokeWidth={activeGridStyling.gridStrokeWidth}
                   />
@@ -351,13 +371,12 @@ export function GridCanvas({
               {Array.from({
                 length: rows + 1,
               }).map((_, index) => {
-                const y = drawingRect.y + index * cellHeight;
-
+                const y = gridRect.y + index * cellHeight;
                 return (
                   <Line
                     key={`horizontal-${index}`}
-                    p1={vec(drawingRect.x, y)}
-                    p2={vec(drawingRect.x + drawingRect.width, y)}
+                    p1={vec(gridRect.x, y)}
+                    p2={vec(gridRect.x + gridRect.width, y)}
                     color={gridColor}
                     strokeWidth={activeGridStyling.gridStrokeWidth}
                   />
@@ -377,8 +396,7 @@ export function GridCanvas({
               }).map((_, index) => {
                 const label = getColumnLabel(index);
 
-                const centerX =
-                  drawingRect.x + index * cellWidth + cellWidth / 2;
+                const centerX = gridRect.x + index * cellWidth + cellWidth / 2;
 
                 const textWidth = labelFont.measureText(label).width;
 
@@ -407,8 +425,7 @@ export function GridCanvas({
                 const label = String(index + 1);
 
                 const centerY =
-                  drawingRect.y + index * cellHeight + cellHeight / 2;
-
+                  gridRect.y + index * cellHeight + cellHeight / 2;
                 const textWidth = labelFont.measureText(label).width;
 
                 // Center the label inside the reserved

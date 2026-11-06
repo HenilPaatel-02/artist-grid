@@ -1,10 +1,20 @@
 import { useEffect, useState } from "react";
-import { Keyboard, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Keyboard,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { AppButton } from "@/src/components/ui/AppButton";
 import { COLORS } from "@/src/constants/colors";
 
-import type { DrawingSurface } from "../../drawing-surface/drawing-surface.types";
+import type {
+  DrawingSurface,
+  MeasurementUnit,
+} from "../../drawing-surface/drawing-surface.types";
 import { calculateGrid } from "../grid-calculation.utils";
 import type { GridCalculation, GridSettings } from "../grid.types";
 
@@ -18,6 +28,51 @@ const CYAN = "#00E5FF";
 const PURPLE = "#3B0A6B";
 const VIOLET = "#6A2BB8";
 const CARD_BACKGROUND = "#10091A";
+
+type ConfigurableGridMode = "rows-columns" | "cell-size";
+
+const CELL_SIZE_PRESETS = [
+  { label: "1 cm", valueMm: 10 },
+  { label: "2 cm", valueMm: 20 },
+  { label: "2.5 cm", valueMm: 25 },
+  { label: "3 cm", valueMm: 30 },
+  { label: "5 cm", valueMm: 50 },
+  { label: "1 inch", valueMm: 25.4 },
+];
+
+const DISPLAY_UNITS: MeasurementUnit[] = ["mm", "cm", "inch"];
+
+const convertFromMm = (valueMm: number, unit: MeasurementUnit): number => {
+  switch (unit) {
+    case "mm":
+      return valueMm;
+    case "cm":
+      return valueMm / 10;
+    case "inch":
+      return valueMm / 25.4;
+    case "ft":
+      return valueMm / 304.8;
+  }
+};
+
+const formatMeasurement = (valueMm: number, unit: MeasurementUnit): string => {
+  const value = convertFromMm(valueMm, unit);
+
+  return `${Number(value.toFixed(2))} ${unit === "inch" ? "in" : unit}`;
+};
+
+const convertToMm = (value: number, unit: MeasurementUnit): number => {
+  switch (unit) {
+    case "mm":
+      return value;
+    case "cm":
+      return value * 10;
+    case "inch":
+      return value * 25.4;
+    case "ft":
+      return value * 304.8;
+  }
+};
 
 export function GridSettingsSection({
   surface,
@@ -33,12 +88,88 @@ export function GridSettingsSection({
   );
   const [error, setError] = useState<string | null>(null);
 
+  const [gridMode, setGridMode] = useState<ConfigurableGridMode>(
+    restoredCalculation?.cellSizeMm !== undefined
+      ? "cell-size"
+      : "rows-columns",
+  );
+
+  const [measurementUnit, setMeasurementUnit] = useState<MeasurementUnit>("mm");
+
+  const [cellSizeMm, setCellSizeMm] = useState(
+    restoredCalculation?.cellSizeMm ?? 25,
+  );
+
+  const [customCellSize, setCustomCellSize] = useState("25");
+
   useEffect(() => {
+    const restoredMode =
+      restoredCalculation?.cellSizeMm !== undefined
+        ? "cell-size"
+        : "rows-columns";
+
+    const restoredCellSize = restoredCalculation?.cellSizeMm ?? 25;
+
+    setGridMode(restoredMode);
     setRows(String(restoredCalculation?.rows ?? 10));
     setColumns(String(restoredCalculation?.columns ?? 8));
     setCalculation(restoredCalculation ?? null);
+
+    setCellSizeMm(restoredCellSize);
+    setCustomCellSize(
+      String(
+        Number(convertFromMm(restoredCellSize, measurementUnit).toFixed(2)),
+      ),
+    );
+
     setError(null);
   }, [restoredCalculation, surface]);
+
+  const invalidateCalculation = () => {
+    setCalculation(null);
+    setError(null);
+    onGridChange?.(null);
+  };
+
+  const handleModeChange = (mode: ConfigurableGridMode) => {
+    setGridMode(mode);
+    invalidateCalculation();
+  };
+
+  const handleUnitChange = (unit: MeasurementUnit) => {
+    const currentValue = convertFromMm(cellSizeMm, unit);
+
+    setMeasurementUnit(unit);
+    setCustomCellSize(String(Number(currentValue.toFixed(2))));
+
+    invalidateCalculation();
+  };
+
+  const handlePresetChange = (valueMm: number) => {
+    setCellSizeMm(valueMm);
+
+    setCustomCellSize(
+      String(Number(convertFromMm(valueMm, measurementUnit).toFixed(2))),
+    );
+
+    invalidateCalculation();
+  };
+
+  const handleCustomCellSizeChange = (value: string) => {
+    setCustomCellSize(value);
+
+    const numericValue = Number(value);
+
+    if (!value.trim() || !Number.isFinite(numericValue) || numericValue <= 0) {
+      invalidateCalculation();
+      return;
+    }
+
+    const nextCellSizeMm = convertToMm(numericValue, measurementUnit);
+
+    setCellSizeMm(nextCellSizeMm);
+    invalidateCalculation();
+  };
 
   const handleCalculate = () => {
     Keyboard.dismiss();
@@ -46,11 +177,26 @@ export function GridSettingsSection({
     try {
       setError(null);
 
-      const settings: GridSettings = {
-        mode: "rows-columns",
-        rows: Number(rows),
-        columns: Number(columns),
-      };
+      if (
+        gridMode === "cell-size" &&
+        (!customCellSize.trim() ||
+          !Number.isFinite(Number(customCellSize)) ||
+          Number(customCellSize) <= 0)
+      ) {
+        throw new Error("Please enter a valid cell size.");
+      }
+
+      const settings: GridSettings =
+        gridMode === "rows-columns"
+          ? {
+              mode: "rows-columns",
+              rows: Number(rows),
+              columns: Number(columns),
+            }
+          : {
+              mode: "cell-size",
+              cellSizeMm,
+            };
 
       const result = calculateGrid(surface, settings);
 
@@ -97,67 +243,235 @@ export function GridSettingsSection({
         </View>
       </View>
 
-      {/* Grid inputs */}
+      {/* GRID MODE SELECTOR */}
       <View style={styles.inputCard}>
-        <View style={styles.inputHeader}>
-          <Text style={styles.cardTitle}>Grid Dimensions</Text>
-          <Text style={styles.cardHint}>Rows × Columns</Text>
+        <Text style={styles.cardTitle}>Grid Mode</Text>
+
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+          {(
+            [
+              ["rows-columns", "Rows & Columns"],
+              ["cell-size", "Cell Size"],
+            ] as const
+          ).map(([value, label]) => {
+            const selected = gridMode === value;
+
+            return (
+              <Pressable
+                key={value}
+                onPress={() => handleModeChange(value)}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  borderRadius: 12,
+                  alignItems: "center",
+                  backgroundColor: selected ? PURPLE : CARD_BACKGROUND,
+                  borderWidth: 1,
+                  borderColor: selected ? CYAN : "#352443",
+                }}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+              >
+                <Text
+                  style={{
+                    color: selected ? CYAN : "#F4F0FA",
+                    fontWeight: "600",
+                    fontSize: 13,
+                  }}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
+      </View>
 
-        <View style={styles.inputs}>
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Rows</Text>
-              <Text style={styles.inputHint}>Horizontal divisions</Text>
-            </View>
-
-            <TextInput
-              value={rows}
-              onChangeText={handleRowsChange}
-              keyboardType="number-pad"
-              style={styles.input}
-              placeholder="10"
-              placeholderTextColor={COLORS.textSecondary}
-              selectTextOnFocus
-              maxLength={3}
-              accessibilityLabel="Number of grid rows"
-              returnKeyType="next"
-            />
+      {/* Grid inputs */}
+      {gridMode === "rows-columns" ? (
+        <View style={styles.inputCard}>
+          <View style={styles.inputHeader}>
+            <Text style={styles.cardTitle}>Grid Dimensions</Text>
+            <Text style={styles.cardHint}>Rows × Columns</Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Columns</Text>
-              <Text style={styles.inputHint}>Vertical divisions</Text>
+          <View style={styles.inputs}>
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Rows</Text>
+                <Text style={styles.inputHint}>Horizontal divisions</Text>
+              </View>
+
+              <TextInput
+                value={rows}
+                onChangeText={handleRowsChange}
+                keyboardType="number-pad"
+                style={styles.input}
+                placeholder="10"
+                placeholderTextColor={COLORS.textSecondary}
+                selectTextOnFocus
+                maxLength={3}
+                accessibilityLabel="Number of grid rows"
+                returnKeyType="next"
+              />
             </View>
 
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Columns</Text>
+                <Text style={styles.inputHint}>Vertical divisions</Text>
+              </View>
+
+              <TextInput
+                value={columns}
+                onChangeText={handleColumnsChange}
+                keyboardType="number-pad"
+                style={styles.input}
+                placeholder="8"
+                placeholderTextColor={COLORS.textSecondary}
+                selectTextOnFocus
+                maxLength={3}
+                accessibilityLabel="Number of grid columns"
+                returnKeyType="done"
+                onSubmitEditing={handleCalculate}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.helperText}>
+            Example: 10 rows × 8 columns creates 80 drawing cells.
+          </Text>
+
+          <AppButton
+            title="Calculate Grid"
+            onPress={handleCalculate}
+            style={styles.calculateButton}
+          />
+        </View>
+      ) : (
+        <View style={styles.inputCard}>
+          <Text style={styles.cardTitle}>Cell Size</Text>
+          <Text style={styles.helperText}>
+            Choose the physical size of each square drawing cell.
+          </Text>
+
+          {/* Presets */}
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 8,
+              marginTop: 16,
+            }}
+          >
+            {CELL_SIZE_PRESETS.map((preset) => {
+              const selected = Math.abs(cellSizeMm - preset.valueMm) < 0.001;
+
+              return (
+                <Pressable
+                  key={preset.label}
+                  onPress={() => handlePresetChange(preset.valueMm)}
+                  style={{
+                    width: "31%",
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    backgroundColor: selected ? PURPLE : "#1A1026",
+                    borderWidth: 1,
+                    borderColor: selected ? CYAN : "#352443",
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    style={{
+                      color: selected ? CYAN : "#F4F0FA",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {preset.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Custom size */}
+          <Text style={[styles.label, { marginTop: 20 }]}>
+            Custom Cell Size
+          </Text>
+
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              marginTop: 8,
+            }}
+          >
             <TextInput
-              value={columns}
-              onChangeText={handleColumnsChange}
-              keyboardType="number-pad"
-              style={styles.input}
-              placeholder="8"
+              value={customCellSize}
+              onChangeText={handleCustomCellSizeChange}
+              keyboardType="decimal-pad"
+              placeholder="Enter cell size"
               placeholderTextColor={COLORS.textSecondary}
+              style={[styles.input, { flex: 1 }]}
               selectTextOnFocus
-              maxLength={3}
-              accessibilityLabel="Number of grid columns"
+              accessibilityLabel="Custom square cell size"
               returnKeyType="done"
               onSubmitEditing={handleCalculate}
             />
+
+            <Text style={{ color: CYAN, fontWeight: "600" }}>
+              {measurementUnit === "inch" ? "in" : measurementUnit}
+            </Text>
           </View>
+
+          {/* Unit */}
+          <Text style={[styles.label, { marginTop: 20 }]}>
+            Measurement Unit
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            {DISPLAY_UNITS.map((unit) => {
+              const selected = measurementUnit === unit;
+
+              return (
+                <Pressable
+                  key={unit}
+                  onPress={() => handleUnitChange(unit)}
+                  style={{
+                    flex: 1,
+                    padding: 12,
+                    alignItems: "center",
+                    borderRadius: 10,
+                    backgroundColor: selected ? PURPLE : "#1A1026",
+                    borderWidth: 1,
+                    borderColor: selected ? CYAN : "#352443",
+                  }}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                >
+                  <Text
+                    style={{
+                      color: selected ? CYAN : "#F4F0FA",
+                      fontWeight: "600",
+                    }}
+                  >
+                    {unit === "inch" ? "Inches" : unit}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <AppButton
+            title="Calculate Grid"
+            onPress={handleCalculate}
+            style={styles.calculateButton}
+          />
         </View>
-
-        <Text style={styles.helperText}>
-          Example: 10 rows × 8 columns creates 80 drawing cells.
-        </Text>
-
-        <AppButton
-          title="Calculate Grid"
-          onPress={handleCalculate}
-          style={styles.calculateButton}
-        />
-      </View>
-
+      )}
       {/* Validation feedback */}
       {error ? (
         <View style={styles.errorContainer}>
@@ -205,14 +519,51 @@ export function GridSettingsSection({
             <Text style={styles.cellSizeLabel}>CELL DIMENSIONS</Text>
 
             <Text style={styles.cellSizeValue}>
-              {calculation.cellWidth.toFixed(2)} ×{" "}
-              {calculation.cellHeight.toFixed(2)} mm
+              {formatMeasurement(calculation.cellWidth, measurementUnit)}
+              {" × "}
+              {formatMeasurement(calculation.cellHeight, measurementUnit)}
             </Text>
 
             <Text style={styles.cellSizeHint}>
               Width × Height per drawing cell
             </Text>
           </View>
+
+          {calculation.cellSizeMm !== undefined ? (
+            <View style={styles.cellSizeContainer}>
+              <Text style={styles.cellSizeLabel}>PAPER MARGINS</Text>
+
+              <Text style={styles.cellSizeValue}>
+                Left:{" "}
+                {formatMeasurement(
+                  calculation.marginLeftMm ?? 0,
+                  measurementUnit,
+                )}
+                {"  "}Right:{" "}
+                {formatMeasurement(
+                  calculation.marginRightMm ?? 0,
+                  measurementUnit,
+                )}
+              </Text>
+
+              <Text style={styles.cellSizeValue}>
+                Top:{" "}
+                {formatMeasurement(
+                  calculation.marginTopMm ?? 0,
+                  measurementUnit,
+                )}
+                {"  "}Bottom:{" "}
+                {formatMeasurement(
+                  calculation.marginBottomMm ?? 0,
+                  measurementUnit,
+                )}
+              </Text>
+
+              <Text style={styles.cellSizeHint}>
+                Grid is centered on your selected paper.
+              </Text>
+            </View>
+          ) : null}
         </View>
       ) : null}
     </View>
